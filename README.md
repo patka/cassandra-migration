@@ -25,9 +25,11 @@ new MigrationRepository("/my/path/here");
 ## Naming
 Scripts should be named in the following schema:
 
+```
 <version>_<name>.cql
+```
 
-If the '.clq' extension is missing the file will be ignored. The 'version' is required to figure out the latest version of the scripts and relates to the version that is stored in the database schema information table. The name is something that is just for the developers purpose and should be something descriptive.
+If the '.clq' extension is missing the file will be ignored. The 'version' is required to figure out the latest version of the scripts and relates to the version that is stored in the database schema information table. It should be an integer number. Leading zeros are accepted. The name is something that is just for the developers purpose and should be something descriptive.
 
 ## Script content
 The script format is rather simple. It allows one statement per line and lines should be finished with a ';' character. Every line that is not empty will be executed against the Cassandra instance, therefore comments are currently not supported.
