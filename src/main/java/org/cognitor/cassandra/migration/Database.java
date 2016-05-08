@@ -1,0 +1,174 @@
+package org.cognitor.cassandra.migration;
+
+import static java.lang.String.format;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
+import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+
+/**
+ * This class represents the Cassandra database. It is used to retrieve
+ * the current version of the database and to execute migrations.
+ * Migrations are executed with a consistency level of quorum in order
+ * to make sure that all databases are on the same schema version.
+ * By doing this it should not be possible to update a schema that is
+ * not shared by all nodes.
+ *
+ * @author Patrick Kranz
+ */
+public class Database {
+    private static final Logger LOGGER = LoggerFactory.getLogger(Database.class);
+
+    /**
+     * The name of the table that manages the migration scripts
+     */
+    private static final String SCHEMA_CF = "schema_migration";
+
+    /**
+     * Insert statement that logs a migration into the schema_migration table.
+     */
+    private static final String INSERT_MIGRATION = "insert into %s"
+            + "(applied_successful, version, script_name, script) values(?, ?, ?, ?)";
+
+    /**
+     * Statement used to create the table that manages the migrations.
+     */
+    private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
+            + " (applied_successful boolean, version int, script_name varchar, script text,"
+            + " PRIMARY KEY (applied_successful, version))";
+
+    /**
+     * The query that retrieves current schema version
+     */
+    private static final String VERSION_QUERY =
+            "select version from %s where applied_successful = True "
+                    + "order by version desc limit 1";
+
+    /**
+     * Error message that is thrown if there is an error during the migration
+     */
+    private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
+
+    /**
+     * The delimiter that is used between two cql statements.
+     */
+    private static final String STATEMENT_DELIMITER = ";";
+
+    private final String keyspaceName;
+    private final Cluster cluster;
+    private final Session session;
+
+    /**
+     * Creates a new instance of the database.
+     *
+     * @param cluster      the cluster that is connected to a cassandra instance
+     * @param keyspaceName the keyspace name that will be managed by this instance
+     */
+    public Database(Cluster cluster, String keyspaceName) {
+        this.cluster = notNull(cluster, "cluster");
+        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
+        session = cluster.connect(keyspaceName);
+        ensureSchemaTable();
+    }
+
+    /**
+     * Gets the current version of the database schema. This version is taken
+     * from the migration table and represent the latest successful entry.
+     *
+     * @return the current schema version
+     */
+    public int getVersion() {
+        ResultSet resultSet = session.execute(format(VERSION_QUERY, SCHEMA_CF));
+        Row result = resultSet.one();
+        if (result == null) {
+            return 0;
+        }
+        return result.getInt(0);
+    }
+
+    /**
+     * Returns the name of the keyspace managed by this instance.
+     *
+     * @return the name of the keyspace managed by this instance
+     */
+    public String getKeyspaceName() {
+        return this.keyspaceName;
+    }
+
+    /**
+     * Makes sure the schema migration table exists. If it is not available it will be created.
+     */
+    private void ensureSchemaTable() {
+        if (schemaTablesIsNotExisting()) {
+            createSchemaTable();
+        }
+    }
+
+    private boolean schemaTablesIsNotExisting() {
+        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(SCHEMA_CF) == null;
+    }
+
+    private void createSchemaTable() {
+        session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
+    }
+
+    /**
+     * Executes the given migration to the database and logs the migration along with the output in the migration table.
+     * In case of an error a {@link MigrationException} is thrown with the cause of the error inside.
+     *
+     * @param migration the migration to be executed.
+     * @throws MigrationException if the migration fails
+     */
+    public void execute(DbMigration migration) {
+        notNull(migration, "migration");
+        LOGGER.debug(format("About to execute migration %s to version %d", migration.getScriptName(),
+                migration.getVersion()));
+        String lastStatement = null;
+        try {
+            for (String statement : migration.getMigrationScript().split(STATEMENT_DELIMITER)) {
+                statement = statement.trim();
+                lastStatement = statement;
+                executeStatement(statement);
+            }
+            logMigration(migration, true);
+            LOGGER.debug(format("Successfully applied migration %s to version %d",
+                    migration.getScriptName(), migration.getVersion()));
+        } catch (Exception exception) {
+            logMigration(migration, false);
+            throw new MigrationException(format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement),
+                    exception);
+        }
+    }
+
+    private void executeStatement(String statement) {
+        if (!statement.isEmpty()) {
+            SimpleStatement simpleStatement = new SimpleStatement(statement);
+            simpleStatement.setConsistencyLevel(ConsistencyLevel.QUORUM);
+            session.execute(simpleStatement);
+        }
+    }
+
+    /**
+     * Inserts the result of the migration into the migration table
+     *
+     * @param migration     the migration that was executed
+     * @param wasSuccessful indicates if the migration was successful or not
+     */
+    private void logMigration(DbMigration migration, boolean wasSuccessful) {
+        String insertStatement = format(INSERT_MIGRATION, SCHEMA_CF);
+        PreparedStatement statement = session.prepare(insertStatement);
+        BoundStatement boundStatement = statement.bind(wasSuccessful, migration.getVersion(),
+                migration.getScriptName(), migration.getMigrationScript());
+        session.execute(boundStatement);
+    }
+}
