@@ -29,6 +29,8 @@ Scripts should be named in the following schema:
 
 If the '.clq' extension is missing the file will be ignored. The 'version' is required to figure out the latest
 version of the scripts and relates to the version that is stored in the database schema information table.
+The version should start with one as an empty database is considered to have a version of
+zero. Leading zeros for better sorting are accepted.
 The name is something that is just for the developers purpose and should be something descriptive.
 
 ## Script content
@@ -39,8 +41,10 @@ therefore comments are currently not supported.
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.
 Error handling is not really implemented (and as far as I know not really possible from a database point of view).
-If one script fails the migration is stopped and an exception is thrown with an exception message that contains
-the name of the failing script as well as the failing script statement. If that happens, an entry will be put
+If one script fails the migration is stopped and an exception is thrown. The exception contains the name of
+the failing script as well as the broken statement in case the error happened during the execution of a
+statement.
+Every script will result in an entry into the schema_migration table. If a script fails, an entry will be put
 into the 'migration_schema' table stating that this script failed. You can then fix the script and retry the migration.
 It should normally not be necessary to remove failed migrations from the 'migration_schema' table.
 
@@ -58,8 +62,9 @@ is not existing it will be created and it contains the following columns:
 * script (text)
 
 "applied_successful" and "version" together make the primary key. The version of the database schema is equivalent
-to the highest number returned by the version column. This means, even if your counting does not start at one
-(because you removed some very old scripts) the version is not affected by this.
+to the highest number returned by the version column where applied_successful is true.
+This means, even if your counting does not start at one (because you removed some very old scripts)
+the schema version is not affected by this.
 
 All migrations that are marked as applied_successful = false do not affect the version number in any way. It is also
 perfectly legal to have the same version number once with a successful execution and one with a failing execution,
