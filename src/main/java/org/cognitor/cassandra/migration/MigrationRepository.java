@@ -133,7 +133,7 @@ public class MigrationRepository {
             return parseInt(splittedName[0]);
         } catch (NumberFormatException exception) {
             throw new MigrationException(format(EXTRACT_VERSION_ERROR_MSG, scriptName),
-                    exception);
+                    exception, scriptName);
         }
     }
 
@@ -169,7 +169,8 @@ public class MigrationRepository {
         try {
             return readResourceFileAsString(script.getResourceName(), getClass().getClassLoader());
         } catch (IOException exception) {
-            throw new MigrationException(format(READING_SCRIPT_ERROR_MSG, script.getResourceName()), exception);
+            throw new MigrationException(format(READING_SCRIPT_ERROR_MSG, script.getResourceName()),
+                    exception, script.getScriptName());
         }
     }
 

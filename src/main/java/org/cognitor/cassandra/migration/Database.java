@@ -141,8 +141,8 @@ public class Database {
                     migration.getScriptName(), migration.getVersion()));
         } catch (Exception exception) {
             logMigration(migration, false);
-            throw new MigrationException(format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement),
-                    exception);
+            String errorMessage = format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement);
+            throw new MigrationException(errorMessage, exception, migration.getScriptName(), lastStatement);
         }
     }
 
