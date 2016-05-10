@@ -25,7 +25,9 @@ new MigrationRepository("/my/path/here");
 ## Naming
 Scripts should be named in the following schema:
 
+```
 <version>_<name>.cql
+```
 
 If the '.clq' extension is missing the file will be ignored. The 'version' is required to figure out the latest
 version of the scripts and relates to the version that is stored in the database schema information table.
