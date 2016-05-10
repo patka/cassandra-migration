@@ -47,9 +47,7 @@ public class MigrationTask {
         }
 
         List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
-        for (DbMigration migration : migrations) {
-            database.execute(migration);
-        }
+        migrations.forEach(database::execute);
         LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));
     }
 

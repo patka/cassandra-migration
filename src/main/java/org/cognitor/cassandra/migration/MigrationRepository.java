@@ -156,12 +156,10 @@ public class MigrationRepository {
      */
     public List<DbMigration> getMigrationsSinceVersion(int version) {
         List<DbMigration> dbMigrations = new ArrayList<>();
-        for (Script script : migrationScripts) {
-            if (script.getVersion() > version) {
-                String content = loadScriptContent(script);
-                dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
-            }
-        }
+        migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
+            String content = loadScriptContent(script);
+            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
+        });
         return dbMigrations;
     }
 
