@@ -17,12 +17,8 @@ import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 
 /**
- * This class represents the Cassandra database. It is used to retrieve
- * the current version of the database and to execute migrations.
- * Migrations are executed with a consistency level of quorum in order
- * to make sure that all databases are on the same schema version.
- * By doing this it should not be possible to update a schema that is
- * not shared by all nodes.
+ * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
+ * execute migrations.
  *
  * @author Patrick Kranz
  */

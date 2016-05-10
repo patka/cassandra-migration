@@ -61,6 +61,7 @@ public class MigrationRepository {
      * Creates a new repository with the given scriptPath. The scriptPath must not be null.
      *
      * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath) {
         notNullOrEmpty(scriptPath, "scriptPath");
