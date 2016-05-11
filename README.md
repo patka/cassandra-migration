@@ -62,6 +62,7 @@ is not existing it will be created and it contains the following columns:
 * version (int)
 * script_name varchar
 * script (text)
+* executed_at (timestamp)
 
 "applied_successful" and "version" together make the primary key. The version of the database schema is equivalent
 to the highest number returned by the version column where applied_successful is true.
