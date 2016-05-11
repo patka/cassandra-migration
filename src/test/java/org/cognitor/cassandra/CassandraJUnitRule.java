@@ -36,7 +36,7 @@ public class CassandraJUnitRule extends ExternalResource {
         cluster = new Cluster.Builder().addContactPoints(LOCALHOST).withPort(9142).build();
     }
 
-    protected void load() {
+    private void load() {
         Session session = cluster.connect();
         CQLDataLoader dataLoader = new CQLDataLoader(session);
         dataLoader.load(dataSet);

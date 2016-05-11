@@ -53,9 +53,8 @@ public class FileSystemLocationScanner implements ClassPathLocationScanner {
      * @param scanRootLocation    The root location of the scan on the classpath, without leading or trailing slashes.
      * @param folder              The folder to look for resources under on disk.
      * @return The resource names;
-     * @throws IOException when the folder could not be read.
      */
-    private Set<String> findResourceNamesFromFileSystem(String classPathRootOnDisk, String scanRootLocation, File folder) throws IOException {
+    private Set<String> findResourceNamesFromFileSystem(String classPathRootOnDisk, String scanRootLocation, File folder) {
         LOGGER.debug("Scanning for resources in path: {} ({})", folder.getPath(), scanRootLocation);
 
         Set<String> resourceNames = new TreeSet<>();

@@ -23,16 +23,15 @@ import static org.junit.Assert.assertThat;
  * @author Patrick Kranz
  */
 public class DatabaseTest {
-    private static final String KEYSPACE = "test_keyspace";
 
     @Rule
-    public CassandraJUnitRule cassandra = new CassandraJUnitRule("migrationCassandraInit.cql");
+    public final CassandraJUnitRule cassandra = new CassandraJUnitRule("migrationCassandraInit.cql");
 
     private Database database;
 
     @Before
     public void setUp() {
-        database = new Database(cassandra.getCluster(), KEYSPACE);
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
     }
 
     @Test
@@ -89,7 +88,7 @@ public class DatabaseTest {
     }
 
     private List<Row> loadMigrations() {
-        Session session = cassandra.getCluster().connect(KEYSPACE);
+        Session session = cassandra.getCluster().connect(CassandraJUnitRule.TEST_KEYSPACE);
         ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM schema_migration;"));
         return resultSet.all();
     }
