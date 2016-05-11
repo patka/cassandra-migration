@@ -1,11 +1,5 @@
 package org.cognitor.cassandra.it.migration;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
-
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
@@ -20,6 +14,10 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
+
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author Patrick Kranz
@@ -47,13 +45,25 @@ public class DatabaseTest {
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
         migrationTask.migrate();
         assertThat(database.getVersion(), is(equalTo(2)));
+
+        List<Row> results = loadMigrations();
+        assertThat(results.size(), is(equalTo(2)));
+        assertThat(results.get(0).getBool("applied_successful"), is(true));
+        assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(0).getString("script_name"), is(equalTo("001_init.cql")));
+        assertThat(results.get(0).getString("script"), is(startsWith("CREATE TABLE")));
+        assertThat(results.get(1).getBool("applied_successful"), is(true));
+        assertThat(results.get(1).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(1).getString("script_name"), is(equalTo("002_add_events_table.cql")));
+        assertThat(results.get(1).getString("script"), is(equalTo("CREATE TABLE EVENTS (event_id uuid primary key, event_name varchar);")));
     }
+
 
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
         MigrationRepository repository = new MigrationRepository("migrationtest");
-        new MigrationTask(database,repository).migrate();
+        new MigrationTask(database, repository).migrate();
 
         assertThat(database.getVersion(), is(equalTo(0)));
     }
@@ -72,10 +82,15 @@ public class DatabaseTest {
         assertThat(exception.getScriptName(), is(equalTo("001_init.cql")));
         assertThat(exception.getStatement(), is(equalTo("CREATE TABLE PERSON (id uuid primary key, name varcha)")));
 
-        Session session = cassandra.getCluster().connect(KEYSPACE);
-        ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM schema_migration;"));
-        List<Row> results = resultSet.all();
+        List<Row> results = loadMigrations();
         assertThat(results.size(), is(equalTo(1)));
         assertThat(results.get(0).getBool("applied_successful"), is(false));
+        assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+    }
+
+    private List<Row> loadMigrations() {
+        Session session = cassandra.getCluster().connect(KEYSPACE);
+        ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM schema_migration;"));
+        return resultSet.all();
     }
 }

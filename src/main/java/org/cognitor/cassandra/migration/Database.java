@@ -16,6 +16,8 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 
+import java.util.Date;
+
 /**
  * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
  * execute migrations.
@@ -34,14 +36,14 @@ public class Database {
      * Insert statement that logs a migration into the schema_migration table.
      */
     private static final String INSERT_MIGRATION = "insert into %s"
-            + "(applied_successful, version, script_name, script) values(?, ?, ?, ?)";
+            + "(applied_successful, version, script_name, script, executed_at) values(?, ?, ?, ?, ?)";
 
     /**
      * Statement used to create the table that manages the migrations.
      */
     private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
             + " (applied_successful boolean, version int, script_name varchar, script text,"
-            + " PRIMARY KEY (applied_successful, version))";
+            + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
 
     /**
      * The query that retrieves current schema version
@@ -164,7 +166,7 @@ public class Database {
         String insertStatement = format(INSERT_MIGRATION, SCHEMA_CF);
         PreparedStatement statement = session.prepare(insertStatement);
         BoundStatement boundStatement = statement.bind(wasSuccessful, migration.getVersion(),
-                migration.getScriptName(), migration.getMigrationScript());
+                migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
     }
 }
