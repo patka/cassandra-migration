@@ -15,10 +15,13 @@ import static java.lang.String.format;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
+ * <p>
  * This class represents the collection of scripts that contain database migrations. It will scan the given location for
  * scripts that can be executed and analyzes the version of the scripts.
- * <p/>
+ * </p>
+ * <p>
  * Only scripts that end with <code>SCRIPT_EXTENSION</code> will be considered.
+ * </p>
  *
  * @author Patrick Kranz
  */
