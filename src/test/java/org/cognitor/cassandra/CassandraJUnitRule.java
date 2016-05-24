@@ -9,6 +9,8 @@ import org.junit.rules.ExternalResource;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Session;
 
+import static org.cassandraunit.utils.EmbeddedCassandraServerHelper.DEFAULT_CASSANDRA_YML_FILE;
+
 /**
  * Cassandra Rule class that loads data from a specified point to initialize the database.
  * This rule also increases the default timeout in case of a slow CI system.
@@ -26,14 +28,16 @@ public class CassandraJUnitRule extends ExternalResource {
 
     private final Cluster cluster;
     private final CQLDataSet dataSet;
+    private final String ymlFileLocation;
 
     public CassandraJUnitRule() {
-        this(DEFAULT_SCRIPT_LOCATION);
+        this(DEFAULT_SCRIPT_LOCATION, DEFAULT_CASSANDRA_YML_FILE);
     }
 
-    public CassandraJUnitRule(String dataSetLocation) {
+    public CassandraJUnitRule(String dataSetLocation, String ymlFileLocation) {
         dataSet = new ClassPathCQLDataSet(dataSetLocation, TEST_KEYSPACE);
         cluster = new Cluster.Builder().addContactPoints(LOCALHOST).withPort(9142).build();
+        this.ymlFileLocation = ymlFileLocation;
     }
 
     private void load() {
@@ -45,7 +49,7 @@ public class CassandraJUnitRule extends ExternalResource {
 
     @Override
     protected void before() throws Exception {
-        EmbeddedCassandraServerHelper.startEmbeddedCassandra(TIMEOUT);
+        EmbeddedCassandraServerHelper.startEmbeddedCassandra(ymlFileLocation, TIMEOUT);
         load();
     }
 

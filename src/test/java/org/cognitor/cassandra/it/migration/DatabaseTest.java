@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import java.util.List;
 
+import static org.cognitor.cassandra.CassandraJUnitRule.DEFAULT_SCRIPT_LOCATION;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
@@ -25,7 +26,7 @@ import static org.junit.Assert.assertThat;
 public class DatabaseTest {
 
     @Rule
-    public final CassandraJUnitRule cassandra = new CassandraJUnitRule("migrationCassandraInit.cql");
+    public final CassandraJUnitRule cassandra = new CassandraJUnitRule(DEFAULT_SCRIPT_LOCATION, "cassandra.yml");
 
     private Database database;
 
