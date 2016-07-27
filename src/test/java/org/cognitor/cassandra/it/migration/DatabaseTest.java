@@ -44,6 +44,8 @@ public class DatabaseTest {
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndEmptyDatabaseGiven() {
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
         migrationTask.migrate();
+        // after migration the database object is closed
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
         assertThat(database.getVersion(), is(equalTo(2)));
 
         List<Row> results = loadMigrations();
