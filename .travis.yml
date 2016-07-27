@@ -1,4 +1,0 @@
-language: java
-before_install: echo "MAVEN_OPTS='-Xmx1024m'" > ~/.mavenrc
-jdk:
-  - oraclejdk8
