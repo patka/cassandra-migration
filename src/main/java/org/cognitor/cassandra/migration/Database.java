@@ -65,6 +65,7 @@ public class Database {
     private final String keyspaceName;
     private final Cluster cluster;
     private final Session session;
+    private final PreparedStatement logStatement;
 
     /**
      * Creates a new instance of the database.
@@ -77,6 +78,7 @@ public class Database {
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
+        this.logStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
     }
 
     /**
@@ -163,9 +165,7 @@ public class Database {
      * @param wasSuccessful indicates if the migration was successful or not
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
-        String insertStatement = format(INSERT_MIGRATION, SCHEMA_CF);
-        PreparedStatement statement = session.prepare(insertStatement);
-        BoundStatement boundStatement = statement.bind(wasSuccessful, migration.getVersion(),
+        BoundStatement boundStatement = logStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
     }
