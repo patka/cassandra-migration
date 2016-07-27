@@ -79,7 +79,7 @@ public class Database implements Closeable {
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
-        logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
     }
 
     /**
