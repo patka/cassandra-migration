@@ -37,6 +37,8 @@ public class MigrationTask {
      * Start the actual migration. Take the version of the database, get all required migrations and execute them or do
      * nothing if the DB is already up to date.
      *
+     * At the end the underlying database instance is closed.
+     *
      * @throws MigrationException if a migration fails
      */
     public void migrate() {
@@ -49,6 +51,7 @@ public class MigrationTask {
         List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
         migrations.forEach(database::execute);
         LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));
+        database.close();
     }
 
     private boolean databaseIsUpToDate() {

@@ -16,6 +16,7 @@ import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 
+import java.io.Closeable;
 import java.util.Date;
 
 /**
@@ -24,7 +25,7 @@ import java.util.Date;
  *
  * @author Patrick Kranz
  */
-public class Database {
+public class Database implements Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(Database.class);
 
     /**
@@ -79,6 +80,15 @@ public class Database {
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
         logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+    }
+
+    /**
+     * Closes the underlying session object. The cluster will not be touched
+     * and will stay open. Call this after all migrations are done.
+     * After calling this, this database instance can no longer be used.
+     */
+    public void close() {
+        this.session.close();
     }
 
     /**
