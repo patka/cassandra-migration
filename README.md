@@ -1,7 +1,7 @@
-# Cassandra Migration
+# Cassandra Migration for Java
 
 ## Purpose
-This library can be used to implement migrations for the Cassandra database schema.
+This library can be used to implement migrations for the Cassandra database schema inside your Java application.
 The usage is oriented on the popular tools for relation databases like flyway or liquibase.
 
 ## Usage
