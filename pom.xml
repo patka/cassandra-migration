@@ -4,7 +4,7 @@
 
     <groupId>org.cognitor.cassandra</groupId>
     <artifactId>cassandra-migration</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <description>
@@ -23,7 +23,7 @@
         <url>https://github.com/patka/cassandra-migration</url>
         <connection>scm:git:https://github.com/patka/cassandra-migration.git</connection>
         <developerConnection>scm:git:https://github.com/patka/cassandra-migration.git</developerConnection>
-      <tag>v1.0.0</tag>
+      <tag>HEAD</tag>
   </scm>
 
     <distributionManagement>
