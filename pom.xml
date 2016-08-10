@@ -6,6 +6,8 @@
     <artifactId>cassandra-migration</artifactId>
     <version>1.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
+    <name>Cassandra Migration</name>
+    <url>https://github.com/patka/cassandra-migration</url>
 
     <description>
         This module helps you manage your cassandra schema migrations by using
