@@ -73,3 +73,13 @@ All migrations that are marked as applied_successful = false do not affect the v
 perfectly legal to have the same version number once with a successful execution and one with a failing execution,
 for example, if the first try failed and the script was fixed afterwards. However, you will only see the last failing
 execution. If the same script fails twice the first failure will be overwritten.
+
+## Maven
+If you are using maven you can add cassandra-migration as a dependency to your project like this:
+```xml
+  <dependency>
+      <groupId>org.cognitor.cassandra</groupId>
+      <artifactId>cassandra-migration</artifactId>
+      <version>1.0.1</version>
+  </dependency>
+```
