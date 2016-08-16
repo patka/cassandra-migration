@@ -177,11 +177,11 @@ public class MigrationRepository {
     }
 
     private String readResourceFileAsString(String resourceName, ClassLoader classLoader) throws IOException {
-        StringBuilder builder = new StringBuilder(256);
+        StringBuilder fileContent = new StringBuilder(256);
         new BufferedReader(
                 new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().forEach(builder::append);
-        return builder.toString();
+                    .lines().forEach(fileContent::append);
+        return fileContent.toString();
     }
 
     private class Script implements Comparable {
