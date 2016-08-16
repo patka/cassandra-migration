@@ -1,12 +1,13 @@
 package org.cognitor.cassandra.migration;
 
-import org.apache.commons.io.IOUtils;
 import org.cognitor.cassandra.migration.resolver.ClassPathLocationScanner;
 import org.cognitor.cassandra.migration.resolver.FileSystemLocationScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
 
@@ -176,7 +177,11 @@ public class MigrationRepository {
     }
 
     private String readResourceFileAsString(String resourceName, ClassLoader classLoader) throws IOException {
-        return IOUtils.toString(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING);
+        StringBuilder builder = new StringBuilder(256);
+        new BufferedReader(
+                new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
+                    .lines().forEach(builder::append);
+        return builder.toString();
     }
 
     private class Script implements Comparable {
