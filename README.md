@@ -1,12 +1,12 @@
-# Cassandra Migration for Java
+# Cassandra Schema Migration for Java
 
 ## Purpose
 This library can be used to implement migrations for the Cassandra database schema inside your Java application.
-The usage is oriented on the popular tools for relation databases like flyway or liquibase.
+The usage is oriented on the popular tools for relational databases like flyway or liquibase.
 
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
-cluster object all you need to do is integrate a the next lines in your projects startup code:
+cluster object all you need to do is integrate the next lines in your projects startup code:
 
 ```
 Database database = new Database(cluster, "nameOfMyKeyspace");
@@ -73,3 +73,16 @@ All migrations that are marked as applied_successful = false do not affect the v
 perfectly legal to have the same version number once with a successful execution and one with a failing execution,
 for example, if the first try failed and the script was fixed afterwards. However, you will only see the last failing
 execution. If the same script fails twice the first failure will be overwritten.
+
+## Maven
+If you are using maven you can add cassandra-migration as a dependency to your project like this:
+```xml
+  <dependency>
+      <groupId>org.cognitor.cassandra</groupId>
+      <artifactId>cassandra-migration</artifactId>
+      <version>1.0.1</version>
+  </dependency>
+```
+
+## Java version
+The library in maven central is compiled for Java 8. If you need a version for Java 7 drop me a line or open an issue and I will see that I get a version done.
