@@ -3,6 +3,7 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+* removed the dependency to apache commons io
 
 ## Released
 ### v1.0.1
