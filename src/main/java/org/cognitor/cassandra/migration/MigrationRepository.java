@@ -180,7 +180,7 @@ public class MigrationRepository {
         StringBuilder fileContent = new StringBuilder(256);
         new BufferedReader(
                 new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().forEach(fileContent::append);
+                    .lines().filter(s -> !s.startsWith("--")).forEach(fileContent::append);
         return fileContent.toString();
     }
 
