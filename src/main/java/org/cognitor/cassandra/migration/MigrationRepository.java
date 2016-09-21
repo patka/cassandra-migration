@@ -23,6 +23,9 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
  * <p>
  * Only scripts that end with <code>SCRIPT_EXTENSION</code> will be considered.
  * </p>
+ * <p>
+ * Within a script every line starting with <code>COMMENT_PREFIX</code> will be ignored.
+ * </p>
  *
  * @author Patrick Kranz
  */
@@ -45,6 +48,12 @@ public class MigrationRepository {
      * The delimiter that needs to be placed between the version and the name of the script.
      */
     public static final String VERSION_NAME_DELIMITER = "_";
+
+    /**
+     * The prefix that can be put in the beginning of a line to indicate a comment.
+     * Any line with starting with this String will be ignored.
+     */
+    public static final String COMMENT_PREFIX = "--";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
@@ -180,7 +189,7 @@ public class MigrationRepository {
         StringBuilder fileContent = new StringBuilder(256);
         new BufferedReader(
                 new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().filter(s -> !s.startsWith("--")).forEach(fileContent::append);
+                    .lines().filter(line -> !line.startsWith(COMMENT_PREFIX)).forEach(fileContent::append);
         return fileContent.toString();
     }
 
