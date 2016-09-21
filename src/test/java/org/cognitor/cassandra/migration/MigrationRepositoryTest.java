@@ -77,4 +77,10 @@ public class MigrationRepositoryTest {
         assertThat(repository.getLatestVersion(), is(equalTo(0)));
     }
 
+    @Test
+    public void shouldIgnoreComments() {
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
+        assertThat(scripts.get(0).getMigrationScript().contains("--"), is(false));
+    }
+
 }
