@@ -37,7 +37,8 @@ The name is something that is just for the developers purpose and should be some
 
 ## Script content
 The script format is rather simple. It allows one statement per line and lines should be finished
-with a ';' character. Every line that is not empty and is not a comment will be executed against the Cassandra instance.
+with a ';' character. Every line that is not empty and is not a single line comment will be executed against the Cassandra instance.
+Multi line comments are not supported.
 
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.

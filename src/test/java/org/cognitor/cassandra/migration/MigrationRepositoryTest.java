@@ -81,6 +81,7 @@ public class MigrationRepositoryTest {
     public void shouldIgnoreComments() {
         List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
         assertThat(scripts.get(0).getMigrationScript().contains("--"), is(false));
+        assertThat(scripts.get(0).getMigrationScript().contains("//"), is(false));
     }
 
 }
