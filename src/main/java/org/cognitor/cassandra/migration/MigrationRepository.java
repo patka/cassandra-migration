@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -53,7 +54,7 @@ public class MigrationRepository {
      * Pattern matching the prefixes that can be put in the beginning of a line to indicate a single line comment.
      * Any line matching this pattern will be ignored.
      */
-    public static final String SINGLE_LINE_COMMENT_PATTERN = "(^--.*)|(^\\/\\/.*)";
+    public static final String SINGLE_LINE_COMMENT_PATTERN = "(^--.*)|(^//.*)";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
@@ -61,6 +62,7 @@ public class MigrationRepository {
     private static final String READING_SCRIPT_ERROR_MSG = "Error while reading script %s";
 
     private final String scriptPath;
+    private final Pattern commentPattern;
     private List<Script> migrationScripts;
 
     /**
@@ -79,6 +81,7 @@ public class MigrationRepository {
     public MigrationRepository(String scriptPath) {
         notNullOrEmpty(scriptPath, "scriptPath");
         this.scriptPath = normalizePath(scriptPath);
+        this.commentPattern = Pattern.compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
             migrationScripts = scanForScripts(scriptPath);
         } catch (IOException exception) {
@@ -189,8 +192,12 @@ public class MigrationRepository {
         StringBuilder fileContent = new StringBuilder(256);
         new BufferedReader(
                 new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().filter(line -> !line.matches(SINGLE_LINE_COMMENT_PATTERN)).forEach(fileContent::append);
+                    .lines().filter(line -> !isLineComment(line)).forEach(fileContent::append);
         return fileContent.toString();
+    }
+
+    private boolean isLineComment(String line) {
+        return commentPattern.matcher(line).matches();
     }
 
     private class Script implements Comparable {

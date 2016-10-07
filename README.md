@@ -38,6 +38,7 @@ The name is something that is just for the developers purpose and should be some
 ## Script content
 The script format is rather simple. It allows one statement per line and lines should be finished
 with a ';' character. Every line that is not empty and is not a single line comment will be executed against the Cassandra instance.
+Single line comments are indicated by either '//' or '--' characters.
 Multi line comments are not supported.
 
 ## Migrations
