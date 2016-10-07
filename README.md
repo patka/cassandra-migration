@@ -81,7 +81,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>1.0.1</version>
+      <version>1.0.2</version>
   </dependency>
 ```
 
