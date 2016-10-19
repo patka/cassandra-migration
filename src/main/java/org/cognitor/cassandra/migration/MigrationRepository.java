@@ -2,6 +2,9 @@ package org.cognitor.cassandra.migration;
 
 import org.cognitor.cassandra.migration.resolver.ClassPathLocationScanner;
 import org.cognitor.cassandra.migration.resolver.FileSystemLocationScanner;
+import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
+import org.cognitor.cassandra.migration.collector.ScriptCollector;
+import org.cognitor.cassandra.migration.collector.ScriptFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +17,8 @@ import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
+import static java.util.Collections.sort;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
@@ -58,29 +63,50 @@ public class MigrationRepository {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
-    private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while scanning script folder for new scripts.";
+    private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while collector script folder for new scripts.";
     private static final String READING_SCRIPT_ERROR_MSG = "Error while reading script %s";
 
     private final String scriptPath;
     private final Pattern commentPattern;
-    private List<Script> migrationScripts;
+    private List<ScriptFile> migrationScripts;
+    private ScriptCollector scriptCollector;
 
     /**
-     * Creates a new repository with the <code>DEFAULT_SCRIPT_PATH</code> configured.
+     * Creates a new repository with the <code>DEFAULT_SCRIPT_PATH</code> configured and a
+     * {@link ScriptCollector} that will throw an exception in case
+     * there are duplicate versions inside the repository.
+     *
+     * @throws MigrationException in case there is a problem reading the scripts in the path or
+     *                            the repository contains duplicate script versions
      */
     public MigrationRepository() {
         this(DEFAULT_SCRIPT_PATH);
     }
 
     /**
-     * Creates a new repository with the given scriptPath. The scriptPath must not be null.
+     * Creates a new repository with the given scriptPath and the default
+     * {@link ScriptCollector} that will throw an exception in case
+     * there are duplicate versions inside the repository.
      *
      * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
-     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     * @throws MigrationException in case there is a problem reading the scripts in the path or
+     *                            the repository contains duplicate script versions
      */
     public MigrationRepository(String scriptPath) {
-        notNullOrEmpty(scriptPath, "scriptPath");
-        this.scriptPath = normalizePath(scriptPath);
+        this(scriptPath, new FailOnDuplicatesCollector());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPath and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(String scriptPath, ScriptCollector scriptCollector) {
+        this.scriptCollector = notNull(scriptCollector, "scriptCollector");
+        this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
         this.commentPattern = Pattern.compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
             migrationScripts = scanForScripts(scriptPath);
@@ -122,10 +148,9 @@ public class MigrationRepository {
         return migrationScripts.get(migrationScripts.size() - 1).getVersion();
     }
 
-    private List<Script> scanForScripts(String scriptPath) throws IOException {
+    private List<ScriptFile> scanForScripts(String scriptPath) throws IOException {
         LOGGER.debug("Scanning for cql migration scripts in " + scriptPath);
         Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
-        Set<Script> scripts = new TreeSet<>();
         while (scriptResources.hasMoreElements()) {
             URL script = scriptResources.nextElement();
             ClassPathLocationScanner scanner = new FileSystemLocationScanner();
@@ -133,14 +158,16 @@ public class MigrationRepository {
                 if (isMigrationScript(resource)) {
                     String scriptName = extractScriptName(resource);
                     int version = extractScriptVersion(scriptName);
-                    scripts.add(new Script(version, resource, scriptName));
+                    scriptCollector.collect(new ScriptFile(version, resource, scriptName));
                 } else {
                     LOGGER.warn(format("Ignoring file %s because it is not a cql file.", resource));
                 }
             }
         }
+        List<ScriptFile> scripts = new ArrayList<>(scriptCollector.getScriptFiles());
         LOGGER.info(format("Found %d migration scripts", scripts.size()));
-        return new ArrayList<>(scripts);
+        sort(scripts);
+        return scripts;
     }
 
     private static int extractScriptVersion(String scriptName) {
@@ -179,7 +206,7 @@ public class MigrationRepository {
         return dbMigrations;
     }
 
-    private String loadScriptContent(Script script) {
+    private String loadScriptContent(ScriptFile script) {
         try {
             return readResourceFileAsString(script.getResourceName(), getClass().getClassLoader());
         } catch (IOException exception) {
@@ -198,60 +225,5 @@ public class MigrationRepository {
 
     private boolean isLineComment(String line) {
         return commentPattern.matcher(line).matches();
-    }
-
-    private class Script implements Comparable {
-        private final int version;
-        private final String resourceName;
-        private final String scriptName;
-
-        public Script(int version, String resourceName, String scriptName) {
-            this.version = version;
-            this.resourceName = resourceName;
-            this.scriptName = scriptName;
-        }
-
-        public int getVersion() {
-            return version;
-        }
-
-        public String getResourceName() {
-            return resourceName;
-        }
-
-        public String getScriptName() {
-            return scriptName;
-        }
-
-        @Override
-        public int compareTo(Object o) {
-            if (o == null || !Script.class.isAssignableFrom(o.getClass())) {
-                return 1;
-            }
-            return Integer.compare(this.version, ((Script) o).version);
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == null || !Script.class.isAssignableFrom(o.getClass())) {
-                return false;
-            }
-            if (o == this) {
-                return true;
-            }
-
-            Script other = (Script) o;
-            return this.resourceName.equals(other.resourceName)
-                    && this.scriptName.equals(other.scriptName)
-                    && this.version == other.version;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = version;
-            result = 31 * result + resourceName.hashCode();
-            result = 31 * result + scriptName.hashCode();
-            return result;
-        }
     }
 }
