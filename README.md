@@ -35,6 +35,16 @@ The version should start with one as an empty database is considered to have a v
 zero. Leading zeros for better sorting are accepted.
 The name is something that is just for the developers purpose and should be something descriptive.
 
+In case there are multiple scripts with the same version (duo to a merge of branches for example),
+an exception is thrown immediately. This behavior can be changed by creating an instance of the
+MigrationRepository providing a ScriptCollector implementation like this:
+```java
+new MigrationRepository(MigrationRepository.DEFAULT_SCRIPT_PATH, new IgnoreDuplicatesCollector);
+```
+Until the version 1.0.2 inclusive the default behavior was to ignore duplicates by considering
+only the first script file for a particular version. As this can lead to unpredictable behavior, since
+it is just a matter of which script is found first, this behavior is no longer the default.
+
 ## Script content
 The script format is rather simple. It allows one statement per line and lines should be finished
 with a ';' character. Every line that is not empty and is not a single line comment will be executed against the Cassandra instance.
