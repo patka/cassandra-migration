@@ -63,7 +63,7 @@ public class MigrationRepository {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
-    private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while collector script folder for new scripts.";
+    private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while scanning script folder for new scripts.";
     private static final String READING_SCRIPT_ERROR_MSG = "Error while reading script %s";
 
     private final String scriptPath;
