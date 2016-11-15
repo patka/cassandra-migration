@@ -6,7 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URL;
+import java.net.URI;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -26,12 +26,12 @@ public class FileSystemLocationScanner implements ClassPathLocationScanner {
      * Scans a path on the filesystem for resources inside the given classpath location.
      *
      * @param location    The system-independent location on the classpath.
-     * @param locationUrl The system-specific physical location URL.
+     * @param locationUri The system-specific physical location URI.
      * @return a sorted set containing all the resources inside the given location
      * @throws IOException if an error accessing the filesystem happens
      */
-    public Set<String> findResourceNames(String location, URL locationUrl) throws IOException {
-        String filePath = toFilePath(locationUrl);
+    public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
+        String filePath = toFilePath(locationUri);
         File folder = new File(filePath);
         if (!folder.isDirectory()) {
             LOGGER.debug("Skipping path as it is not a directory: " + filePath);
@@ -91,9 +91,9 @@ public class FileSystemLocationScanner implements ClassPathLocationScanner {
         return fileName.substring(classPathRootOnDisk.length());
     }
 
-    private static String toFilePath(URL url) {
+    private static String toFilePath(URI uri) {
         try {
-            String filePath = new File(decode(url.getPath().replace("+", "%2b"), UTF_8)).getAbsolutePath();
+            String filePath = new File(decode(uri.getPath().replace("+", "%2b"), UTF_8)).getAbsolutePath();
             if (filePath.endsWith("/")) {
                 return filePath.substring(0, filePath.length() - 1);
             }
