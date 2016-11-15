@@ -5,12 +5,16 @@ import org.cognitor.cassandra.migration.resolver.FileSystemLocationScanner;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
+
+import org.cognitor.cassandra.migration.resolver.JarLocationScanner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -110,7 +114,7 @@ public class MigrationRepository {
         this.commentPattern = Pattern.compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
             migrationScripts = scanForScripts(scriptPath);
-        } catch (IOException exception) {
+        } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }
     }
@@ -148,12 +152,17 @@ public class MigrationRepository {
         return migrationScripts.get(migrationScripts.size() - 1).getVersion();
     }
 
-    private List<ScriptFile> scanForScripts(String scriptPath) throws IOException {
+    private List<ScriptFile> scanForScripts(String scriptPath) throws IOException, URISyntaxException {
         LOGGER.debug("Scanning for cql migration scripts in " + scriptPath);
         Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
         while (scriptResources.hasMoreElements()) {
-            URL script = scriptResources.nextElement();
-            ClassPathLocationScanner scanner = new FileSystemLocationScanner();
+            URI script = scriptResources.nextElement().toURI();
+            ClassPathLocationScanner scanner;
+            if (script.getScheme().equals("jar")) {
+                scanner = new JarLocationScanner();
+            } else {
+                scanner = new FileSystemLocationScanner();
+            }
             for (String resource : scanner.findResourceNames(scriptPath, script)) {
                 if (isMigrationScript(resource)) {
                     String scriptName = extractScriptName(resource);
