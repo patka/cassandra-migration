@@ -6,13 +6,13 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Set;
-import java.util.TreeSet;
+
+import static java.nio.file.FileSystems.newFileSystem;
+import static java.util.Collections.emptyMap;
+import static java.util.stream.Collectors.toSet;
 
 /**
  * Scans a path within a compiled jar for resources that are inside this path.
@@ -32,49 +32,20 @@ public class JarLocationScanner implements ClassPathLocationScanner {
      */
     @Override
     public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
-        final FileSystem fileSystem = FileSystems.newFileSystem(locationUri, new HashMap<>());
+        LOGGER.debug("Scanning in jar {} in location {}", location, locationUri);
+        final FileSystem fileSystem = newFileSystem(locationUri, emptyMap());
         final Path systemPath = fileSystem.getPath(location);
-        final TreeSet<String> resourceNames = new TreeSet<>();
-        final Iterator<Path> iterator = Files.walk(systemPath).iterator();
-
-        while (iterator.hasNext()) {
-            final Path path = iterator.next();
-
-            if (isRegularFile(path)) {
-                final String pathName = path.toString();
-
-                if (pathName.startsWith("/")) {
-                    resourceNames.add(pathName.substring(1));
-                } else {
-                    resourceNames.add(pathName);
-                }
-                LOGGER.debug("Adding regular file: {}", path.getFileName());
-            } else {
-                LOGGER.debug("Skipping path: {}", path);
-            }
-        }
-
-        return resourceNames;
+        return Files.walk(systemPath)
+                .filter(Files::isRegularFile)
+                .map(path -> normalizePath(path.toString()))
+                .collect(toSet());
     }
 
-    /**
-     * Reads isRegularFile attribute and returns it value
-     *
-     * @param path Path to file/directory/symbolic link
-     * @return is path point to regular file or not
-     */
-    private static boolean isRegularFile(Path path) {
-        try {
-            final Object isRegularFile = Files.readAttributes(path, "isRegularFile").get("isRegularFile");
-            if (isRegularFile instanceof Boolean) {
-                return (Boolean) isRegularFile;
-            } else {
-                LOGGER.warn("Reading file attribute isRegularFile for path {} returned unexpected result: {}", path, isRegularFile);
-                return false;
-            }
-        } catch (IOException e) {
-            LOGGER.error("Failed on path reading: {}", path);
-            return false;
+    private static String normalizePath(String pathName) {
+        if (pathName.startsWith("/")) {
+            return pathName.substring(1);
+        } else {
+            return pathName;
         }
     }
 }

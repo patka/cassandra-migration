@@ -15,7 +15,7 @@ public interface ClassPathLocationScanner {
      *
      * @param location    The system-independent location on the classpath.
      * @param locationUri The system-specific physical location URI.
-     * @return The system-independent names of the resources on the classpath in a sorted set.
+     * @return The system-independent names of the resources on the classpath.
      * @throws IOException when the scanning failed.
      */
     Set<String> findResourceNames(String location, URI locationUri) throws IOException;
