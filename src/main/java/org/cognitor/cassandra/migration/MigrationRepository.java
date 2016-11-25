@@ -7,6 +7,7 @@ import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
 
 import org.cognitor.cassandra.migration.resolver.JarLocationScanner;
+import org.cognitor.cassandra.migration.resolver.ScannerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,6 +73,7 @@ public class MigrationRepository {
 
     private final String scriptPath;
     private final Pattern commentPattern;
+    private final ScannerFactory scannerFactory;
     private List<ScriptFile> migrationScripts;
     private ScriptCollector scriptCollector;
 
@@ -112,6 +114,7 @@ public class MigrationRepository {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
         this.commentPattern = Pattern.compile(SINGLE_LINE_COMMENT_PATTERN);
+        this.scannerFactory = new ScannerFactory();
         try {
             migrationScripts = scanForScripts(scriptPath);
         } catch (IOException | URISyntaxException exception) {
@@ -157,12 +160,7 @@ public class MigrationRepository {
         Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
         while (scriptResources.hasMoreElements()) {
             URI script = scriptResources.nextElement().toURI();
-            ClassPathLocationScanner scanner;
-            if (script.getScheme().equals("jar")) {
-                scanner = new JarLocationScanner();
-            } else {
-                scanner = new FileSystemLocationScanner();
-            }
+            ClassPathLocationScanner scanner = scannerFactory.getScanner(script.getScheme());
             for (String resource : scanner.findResourceNames(scriptPath, script)) {
                 if (isMigrationScript(resource)) {
                     String scriptName = extractScriptName(resource);
