@@ -160,6 +160,7 @@ public class MigrationRepository {
         Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
         while (scriptResources.hasMoreElements()) {
             URI script = scriptResources.nextElement().toURI();
+            LOGGER.debug("Potential script folder: {}", script.toString());
             ClassPathLocationScanner scanner = scannerFactory.getScanner(script.getScheme());
             for (String resource : scanner.findResourceNames(scriptPath, script)) {
                 if (isMigrationScript(resource)) {

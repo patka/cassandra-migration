@@ -13,6 +13,8 @@ import java.util.Set;
 
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toSet;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
+import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
  * Scans a path within a compiled jar for resources that are inside this path.
@@ -27,7 +29,9 @@ public class JarLocationScanner implements ClassPathLocationScanner {
      */
     @Override
     public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
-        LOGGER.info("Scanning in jar {} in location {}", locationUri, location);
+        notNullOrEmpty(location, "location");
+        notNull(locationUri, "locationUri");
+        LOGGER.debug("Scanning in jar {} in location {}", locationUri, location);
         try(FileSystem fileSystem = FileSystems.newFileSystem(locationUri, emptyMap())) {
             final Path systemPath = fileSystem.getPath(location);
             return Files.walk(systemPath)
