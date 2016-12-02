@@ -1,4 +1,4 @@
-package org.cognitor.cassandra.migration.resolver;
+package org.cognitor.cassandra.migration.scanner;
 
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 

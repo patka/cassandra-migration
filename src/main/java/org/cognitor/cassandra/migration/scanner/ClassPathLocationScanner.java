@@ -1,4 +1,4 @@
-package org.cognitor.cassandra.migration.resolver;
+package org.cognitor.cassandra.migration.scanner;
 
 import java.io.IOException;
 import java.net.URI;

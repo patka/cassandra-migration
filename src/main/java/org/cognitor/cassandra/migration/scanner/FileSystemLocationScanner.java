@@ -1,4 +1,4 @@
-package org.cognitor.cassandra.migration.resolver;
+package org.cognitor.cassandra.migration.scanner;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,5 +1,7 @@
 package org.cognitor.cassandra.migration.resolver;
 
+import org.cognitor.cassandra.migration.scanner.ClassPathLocationScanner;
+import org.cognitor.cassandra.migration.scanner.JarLocationScanner;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;

@@ -1,11 +1,11 @@
 package org.cognitor.cassandra.migration;
 
-import org.cognitor.cassandra.migration.resolver.ClassPathLocationScanner;
+import org.cognitor.cassandra.migration.scanner.ClassPathLocationScanner;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
 
-import org.cognitor.cassandra.migration.resolver.ScannerFactory;
+import org.cognitor.cassandra.migration.scanner.ScannerFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
