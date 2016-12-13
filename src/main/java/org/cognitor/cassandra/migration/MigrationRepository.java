@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.Collections.sort;
+import static java.util.regex.Pattern.compile;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
@@ -73,7 +74,7 @@ public class MigrationRepository {
     private final Pattern commentPattern;
     private final ScannerFactory scannerFactory;
     private List<ScriptFile> migrationScripts;
-    private ScriptCollector scriptCollector;
+    private final ScriptCollector scriptCollector;
 
     /**
      * Creates a new repository with the <code>DEFAULT_SCRIPT_PATH</code> configured and a
@@ -111,7 +112,7 @@ public class MigrationRepository {
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
-        this.commentPattern = Pattern.compile(SINGLE_LINE_COMMENT_PATTERN);
+        this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         this.scannerFactory = new ScannerFactory();
         try {
             migrationScripts = scanForScripts(scriptPath);

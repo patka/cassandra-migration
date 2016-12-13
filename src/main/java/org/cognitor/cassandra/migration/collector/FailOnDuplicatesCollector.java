@@ -17,8 +17,8 @@ import static java.lang.String.format;
  * @author Patrick Kranz
  */
 public class FailOnDuplicatesCollector implements ScriptCollector {
-    private List<ScriptFile> scripts = new ArrayList<>();
-    private Set<Integer> versions = new HashSet<>();
+    private final List<ScriptFile> scripts = new ArrayList<>();
+    private final Set<Integer> versions = new HashSet<>();
 
     /**
      * {@inheritDoc}

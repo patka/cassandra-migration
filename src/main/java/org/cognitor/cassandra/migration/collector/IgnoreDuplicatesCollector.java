@@ -16,7 +16,7 @@ import java.util.*;
  * @author Patrick Kranz
  */
 public class IgnoreDuplicatesCollector implements ScriptCollector {
-    private Set<ScriptFile> scriptFiles = new TreeSet<>();
+    private final Set<ScriptFile> scriptFiles = new TreeSet<>();
 
     /**
      * {@inheritDoc}
