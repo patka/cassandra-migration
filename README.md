@@ -39,7 +39,7 @@ In case there are multiple scripts with the same version (duo to a merge of bran
 an exception is thrown immediately. This behavior can be changed by creating an instance of the
 MigrationRepository providing a ScriptCollector implementation like this:
 ```java
-new MigrationRepository(MigrationRepository.DEFAULT_SCRIPT_PATH, new IgnoreDuplicatesCollector);
+new MigrationRepository(MigrationRepository.DEFAULT_SCRIPT_PATH, new IgnoreDuplicatesCollector());
 ```
 Until the version 1.0.2 inclusive the default behavior was to ignore duplicates by considering
 only the first script file for a particular version. As this can lead to unpredictable behavior, since
@@ -94,6 +94,3 @@ If you are using maven you can add cassandra-migration as a dependency to your p
       <version>1.0.2</version>
   </dependency>
 ```
-
-## Java version
-The library in maven central is compiled for Java 8. If you need a version for Java 7 drop me a line or open an issue and I will see that I get a version done.
