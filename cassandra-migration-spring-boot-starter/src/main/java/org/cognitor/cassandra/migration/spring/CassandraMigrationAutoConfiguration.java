@@ -5,7 +5,14 @@ import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
+import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -13,18 +20,22 @@ import org.springframework.context.annotation.Configuration;
  * @author Patrick Kranz
  */
 @Configuration
-public class MigrationConfiguration {
-    private MigrationConfigurationProperties properties;
-    private Cluster cluster;
+@EnableConfigurationProperties(CassandraMigrationConfigurationProperties.class)
+@AutoConfigureAfter(CassandraAutoConfiguration.class)
+@ConditionalOnClass(Cluster.class)
+public class CassandraMigrationAutoConfiguration {
+    private CassandraMigrationConfigurationProperties properties;
 
     @Autowired
-    public MigrationConfiguration(MigrationConfigurationProperties properties, Cluster cluster) {
+    public CassandraMigrationAutoConfiguration(CassandraMigrationConfigurationProperties properties) {
         this.properties = properties;
-        this.cluster = cluster;
     }
 
+
     @Bean(initMethod = "migrate")
-    public MigrationTask migrationTask() {
+    @ConditionalOnBean(Cluster.class)
+    @ConditionalOnMissingBean(MigrationTask.class)
+    public MigrationTask migrationTask(Cluster cluster) {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");

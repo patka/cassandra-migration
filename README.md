@@ -4,6 +4,9 @@
 This library can be used to implement migrations for the Cassandra database schema inside your Java application.
 The usage is oriented on the popular tools for relational databases like flyway or liquibase.
 
+If you want to use this library with Spring Boot you can also scroll down to the description
+of how to use the Spring Boot Starter.
+
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
 cluster object all you need to do is integrate the next lines in your projects startup code:
@@ -91,6 +94,17 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>1.0.2</version>
+      <version>2.0.1-SNAPHOST</version>
+  </dependency>
+```
+
+## Spring Boot
+Cassandra Migration comes with a Spring Boot Starter module that can be used to autoconfigure
+the migration. You have to include the following dependency to make it work:
+```xml
+  <dependency>
+      <groupId>org.cognitor.cassandra</groupId>
+      <artifactId>cassandra-migration-spring-boot-stater</artifactId>
+      <version>2.0.1-SNAPSHOT</version>
   </dependency>
 ```

@@ -9,15 +9,15 @@
         <version>2.0.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>cassandra-migration-spring</artifactId>
+    <artifactId>cassandra-migration-spring-boot-starter</artifactId>
     <version>2.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
-    <name>Cassandra Migration Spring Integration</name>
+    <name>Cassandra Migration Spring Boot Integration</name>
     <url>https://github.com/patka/cassandra-migration</url>
 
     <description>
         This module integrates the Cassandra Migration library into Spring
-        and eases the usage.
+        Boot and eases the usage.
     </description>
 
     <properties>
@@ -62,9 +62,35 @@
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-autoconfigure</artifactId>
+            <artifactId>spring-boot-test-autoconfigure</artifactId>
             <version>${spring.boot.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-test-autoconfigure</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+            <version>4.3.7.RELEASE</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+            <version>${spring.boot.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>1.10.19</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <version>${spring.boot.version}</version>
+            <optional>true</optional>
         </dependency>
     </dependencies>
 </project>

@@ -2,7 +2,6 @@ package org.cognitor.cassandra.migration.spring;
 
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -11,9 +10,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
  *
  * @author Patrick Kranz
  */
-@EnableConfigurationProperties
 @ConfigurationProperties(prefix = "cassandra.migration")
-public class MigrationConfigurationProperties {
+public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
@@ -28,7 +26,7 @@ public class MigrationConfigurationProperties {
     /**
      * The location where the scripts reside on the classpath.
      * The default is <code>MigrationRepository.DEFAULT_SCRIPT_PATH</code> which
-     * points to <code>cassandra/migration</code>
+     * points to <code>cassandra/migration</code> on the classpath.
      *
      * @param scriptLocation the location of the migration scripts. Must not be null.
      * @throws IllegalArgumentException when scriptLocation is null or empty

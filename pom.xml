@@ -12,13 +12,13 @@
 
     <modules>
         <module>cassandra-migration</module>
-        <module>cassandra-migration-spring</module>
+        <module>cassandra-migration-spring-boot-starter</module>
     </modules>
 
     <description>
         This is a multi module project that contains a library to assist with
         managing Cassandra database schemas as well as the integration for
-        the Spring Framework.
+        the Spring Boot Framework.
     </description>
 
     <developers>
