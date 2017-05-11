@@ -5,7 +5,6 @@ import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration;
@@ -24,7 +23,7 @@ import org.springframework.context.annotation.Configuration;
 @AutoConfigureAfter(CassandraAutoConfiguration.class)
 @ConditionalOnClass(Cluster.class)
 public class CassandraMigrationAutoConfiguration {
-    private CassandraMigrationConfigurationProperties properties;
+    private final CassandraMigrationConfigurationProperties properties;
 
     @Autowired
     public CassandraMigrationAutoConfiguration(CassandraMigrationConfigurationProperties properties) {
