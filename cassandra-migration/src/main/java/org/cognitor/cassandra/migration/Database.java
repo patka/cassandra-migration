@@ -1,23 +1,17 @@
 package org.cognitor.cassandra.migration;
 
-import static java.lang.String.format;
-import static org.cognitor.cassandra.migration.util.Ensure.notNull;
-import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
-
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.DriverException;
+import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-
 import java.io.Closeable;
 import java.util.Date;
+
+import static java.lang.String.format;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
+import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
  * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
@@ -64,9 +58,36 @@ public class Database implements Closeable {
     private static final String STATEMENT_DELIMITER = ";";
 
     private final String keyspaceName;
+    private final Keyspace keyspace;
     private final Cluster cluster;
     private final Session session;
     private final PreparedStatement logMigrationStatement;
+
+
+    public Database(Cluster cluster, Keyspace keyspace) {
+        this.cluster = notNull(cluster, "cluster");
+        this.keyspace = notNull(keyspace, "keyspace");
+        this.keyspaceName = keyspace.getKeyspaceName();
+        createKeyspaceIfRequired();
+        session = cluster.connect(keyspaceName);
+        ensureSchemaTable();
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+    }
+
+    private void createKeyspaceIfRequired() {
+        if (keyspaceExists()) {
+            return;
+        }
+        try (Session session = this.cluster.connect()) {
+            session.execute(this.keyspace.getCqlStatement());
+        } catch (DriverException exception) {
+            throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
+        }
+    }
+
+    private boolean keyspaceExists() {
+        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
+    }
 
     /**
      * Creates a new instance of the database.
@@ -77,6 +98,7 @@ public class Database implements Closeable {
     public Database(Cluster cluster, String keyspaceName) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
+        this.keyspace = null;
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
         this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));

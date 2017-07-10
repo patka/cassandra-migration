@@ -1,14 +1,13 @@
 package org.cognitor.cassandra.it.migration;
 
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.*;
 import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
+import org.cognitor.cassandra.migration.keyspace.Keyspace;
+import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -25,6 +24,7 @@ import static org.junit.Assert.assertThat;
  */
 public class DatabaseTest {
 
+    private static final String SUCCESSFUL_MIGRATIONS = "cassandra/migrationtest/successful";
     @Rule
     public final CassandraJUnitRule cassandra = new CassandraJUnitRule(DEFAULT_SCRIPT_LOCATION, "cassandra.yml");
 
@@ -60,7 +60,6 @@ public class DatabaseTest {
         assertThat(results.get(1).getString("script"), is(equalTo("CREATE TABLE EVENTS (event_id uuid primary key, event_name varchar);")));
     }
 
-
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
@@ -88,6 +87,34 @@ public class DatabaseTest {
         assertThat(results.size(), is(equalTo(1)));
         assertThat(results.get(0).getBool("applied_successful"), is(false));
         assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+    }
+
+    @Test
+    public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndKeyspaceDefinitionGiven() {
+        assertThat(cassandra.getCluster().getMetadata().getKeyspace("new_keyspace"), is(nullValue()));
+        Keyspace keyspace = new Keyspace("new_keyspace");
+        Database db = new Database(cassandra.getCluster(), keyspace);
+
+        KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("new_keyspace");
+        assertThat(keyspaceMetadata, is(notNullValue()));
+        assertThat(keyspaceMetadata.getReplication().get("class"),
+                is(equalTo("org.apache.cassandra.locator.SimpleStrategy")));
+        assertThat(keyspaceMetadata.getReplication().get("replication_factor"), is(equalTo("1")));
+        assertThat(db.getVersion(), is(equalTo(0)));
+    }
+
+    @Test
+    public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndNetworkKeyspaceDefinitionGiven() {
+        assertThat(cassandra.getCluster().getMetadata().getKeyspace("network_keyspace"), is(nullValue()));
+        Keyspace keyspace = new Keyspace("network_keyspace")
+                .with(new NetworkStrategy().with("dc1", 1));
+        Database db = new Database(cassandra.getCluster(), keyspace);
+
+        KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("network_keyspace");
+        assertThat(keyspaceMetadata, is(notNullValue()));
+        assertThat(keyspaceMetadata.getReplication().get("class"),
+                is(equalTo("org.apache.cassandra.locator.NetworkTopologyStrategy")));
+        assertThat(keyspaceMetadata.getReplication().get("dc1"), is(equalTo("1")));
     }
 
     private List<Row> loadMigrations() {
