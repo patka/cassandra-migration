@@ -1,15 +1,11 @@
-package org.cognitor.cassandra.migration.resolver;
+package org.cognitor.cassandra.migration.scanner;
 
-import org.cognitor.cassandra.migration.scanner.ClassPathLocationScanner;
-import org.cognitor.cassandra.migration.scanner.FileSystemLocationScanner;
-import org.cognitor.cassandra.migration.scanner.JarLocationScanner;
-import org.cognitor.cassandra.migration.scanner.ScannerFactory;
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author Patrick Kranz
