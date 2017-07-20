@@ -11,6 +11,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import static java.net.URLDecoder.decode;
+import static java.util.Collections.emptySet;
 
 /**
  * Scans a path on the filesystem for resources that are inside this path.
@@ -57,13 +58,12 @@ public class FileSystemLocationScanner implements ClassPathLocationScanner {
     private Set<String> findResourceNamesFromFileSystem(String classPathRootOnDisk, String scanRootLocation, File folder) {
         LOGGER.debug("Scanning for resources in path: {} ({})", folder.getPath(), scanRootLocation);
 
-        Set<String> resourceNames = new TreeSet<>();
-
         File[] files = folder.listFiles();
-
         if (files == null) {
-            return resourceNames;
+            return emptySet();
         }
+
+        Set<String> resourceNames = new TreeSet<>();
 
         for (File file : files) {
             if (file.canRead()) {
