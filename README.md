@@ -94,11 +94,11 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.0.1-SNAPHOST</version>
+      <version>2.0.0</version>
   </dependency>
 ```
 
-## Spring Boot
+## Spring Boot (not yet released)
 Cassandra Migration comes with a Spring Boot Starter module that can be used to autoconfigure
 the migration. You have to include the following dependency to make it work:
 ```xml
