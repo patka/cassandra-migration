@@ -1,0 +1,1 @@
+CREATE TABLE OTHER (id uuid primary key, name varchar);

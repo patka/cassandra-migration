@@ -61,6 +61,36 @@ public class DatabaseTest {
     }
 
     @Test
+    public void shouldApplyMigrationUsingOtherMigrationTable() {
+        String alternateMigrationTable = "alternate_schema_migration";
+
+        MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
+        migrationTask.migrate();
+
+        // after migration the database object is closed
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        assertThat(database.getVersion(), is(equalTo(2)));
+        database.close();
+
+        // after migration the database object is closed
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE, alternateMigrationTable);
+        assertThat(database.getVersion(), is(equalTo(0)));
+        migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/alternate_migration_table"));
+        migrationTask.migrate();
+
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE, alternateMigrationTable);
+        assertThat(database.getVersion(), is(equalTo(3)));
+        database.close();
+
+        List<Row> results = loadMigrations(alternateMigrationTable);
+        assertThat(results.size(), is(equalTo(1)));
+        assertThat(results.get(0).getBool("applied_successful"), is(true));
+        assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(0).getString("script_name"), is(equalTo("003_alternate.cql")));
+        assertThat(results.get(0).getString("script"), is(startsWith("CREATE TABLE")));
+    }
+
+    @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
         MigrationRepository repository = new MigrationRepository("migrationtest");
@@ -118,8 +148,12 @@ public class DatabaseTest {
     }
 
     private List<Row> loadMigrations() {
+        return loadMigrations("schema_migration");
+    }
+
+    private List<Row> loadMigrations(String migrationTable) {
         Session session = cassandra.getCluster().connect(CassandraJUnitRule.TEST_KEYSPACE);
-        ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM schema_migration;"));
+        ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM " + migrationTable + ";"));
         return resultSet.all();
     }
 }

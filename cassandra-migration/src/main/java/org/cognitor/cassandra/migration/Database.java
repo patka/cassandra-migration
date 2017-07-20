@@ -62,16 +62,21 @@ public class Database implements Closeable {
     private final Cluster cluster;
     private final Session session;
     private final PreparedStatement logMigrationStatement;
-
+    private final String migrationTableName;
 
     public Database(Cluster cluster, Keyspace keyspace) {
+        this(cluster, keyspace, SCHEMA_CF);
+    }
+
+    public Database(Cluster cluster, Keyspace keyspace, String migrationTableName) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspace = notNull(keyspace, "keyspace");
         this.keyspaceName = keyspace.getKeyspaceName();
+        this.migrationTableName = migrationTableName;
         createKeyspaceIfRequired();
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, migrationTableName));
     }
 
     private void createKeyspaceIfRequired() {
@@ -96,12 +101,24 @@ public class Database implements Closeable {
      * @param keyspaceName the keyspace name that will be managed by this instance
      */
     public Database(Cluster cluster, String keyspaceName) {
+        this(cluster, keyspaceName, SCHEMA_CF);
+    }
+
+    /**
+     * Creates a new instance of the database.
+     *
+     * @param cluster      the cluster that is connected to a cassandra instance
+     * @param keyspaceName the keyspace name that will be managed by this instance
+     * @param migrationTableName the name of the migration table
+     */
+    public Database(Cluster cluster, String keyspaceName, String migrationTableName) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
         this.keyspace = null;
+        this.migrationTableName = migrationTableName;
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, migrationTableName));
     }
 
     /**
@@ -120,7 +137,7 @@ public class Database implements Closeable {
      * @return the current schema version
      */
     public int getVersion() {
-        ResultSet resultSet = session.execute(format(VERSION_QUERY, SCHEMA_CF));
+        ResultSet resultSet = session.execute(format(VERSION_QUERY, migrationTableName));
         Row result = resultSet.one();
         if (result == null) {
             return 0;
@@ -147,11 +164,11 @@ public class Database implements Closeable {
     }
 
     private boolean schemaTablesIsNotExisting() {
-        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(SCHEMA_CF) == null;
+        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(migrationTableName) == null;
     }
 
     private void createSchemaTable() {
-        session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
+        session.execute(format(CREATE_MIGRATION_CF, migrationTableName));
     }
 
     /**
