@@ -5,10 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.Set;
 
 import static java.util.Collections.emptyMap;
@@ -32,12 +29,22 @@ public class JarLocationScanner implements ClassPathLocationScanner {
         notNullOrEmpty(location, "location");
         notNull(locationUri, "locationUri");
         LOGGER.debug("Scanning in jar {} in location {}", locationUri, location);
-        try(FileSystem fileSystem = FileSystems.newFileSystem(locationUri, emptyMap())) {
+        try(FileSystem fileSystem = getFileSystem(locationUri)) {
             final Path systemPath = fileSystem.getPath(location);
             return Files.walk(systemPath)
                     .filter(Files::isRegularFile)
                     .map(path -> normalizePath(path.toString()))
                     .collect(toSet());
+        }
+    }
+
+    private FileSystem getFileSystem(URI location) throws IOException {
+        try {
+            LOGGER.debug("Trying to get existing filesystem for {}", location.toString());
+            return FileSystems.getFileSystem(location);
+        } catch (FileSystemNotFoundException exception) {
+            LOGGER.debug("Creating new filesystem for {}", location.toString());
+            return FileSystems.newFileSystem(location, emptyMap());
         }
     }
 
