@@ -110,10 +110,23 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector) {
+        this(scriptPath, scriptCollector, new ScannerFactory());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPath and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @param scannerFactory the scanner factory use to lookup the scripts.  Must not be null
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerFactory scannerFactory) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
-        this.scannerFactory = new ScannerFactory();
+        this.scannerFactory = scannerFactory;
         try {
             migrationScripts = scanForScripts(scriptPath);
         } catch (IOException | URISyntaxException exception) {
