@@ -3,6 +3,10 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+* Issue 8: It is now possible to create a keyspace as part of the initial
+  migration.
+* Issue 9: Fixing an issue when cassandra-migration is used in an uber-jar that
+  can lead to FileSystemAlreadyExistsException
 
 ## Released
 ### v2.0.0
