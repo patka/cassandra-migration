@@ -10,36 +10,36 @@ import static org.junit.Assert.assertThat;
 /**
  * @author Patrick Kranz
  */
-public class ScannerFactoryTest {
+public class ScannerRegistryTest {
 
     @Test
     public void shouldReturnJarLocationScannerWhenJarSchemeGiven() {
-        ClassPathLocationScanner scanner = new ScannerFactory().getScanner("jar");
+        LocationScanner scanner = new ScannerRegistry().getScanner("jar");
         assertThat(scanner, is(not(nullValue())));
         assertThat(JarLocationScanner.class.isAssignableFrom(scanner.getClass()), is(true));
     }
 
     @Test
     public void shouldIgnoreCaseWhenJarSchemeGiven() {
-        ClassPathLocationScanner scanner = new ScannerFactory().getScanner("jAr");
+        LocationScanner scanner = new ScannerRegistry().getScanner("jAr");
         assertThat(scanner, is(not(nullValue())));
         assertThat(JarLocationScanner.class.isAssignableFrom(scanner.getClass()), is(true));
     }
 
     @Test
     public void shouldReturnFileSystemLocationScannerWhenNonJarSchemeGiven() {
-        ClassPathLocationScanner scanner = new ScannerFactory().getScanner("file");
+        LocationScanner scanner = new ScannerRegistry().getScanner("file");
         assertThat(scanner, is(not(nullValue())));
         assertThat(FileSystemLocationScanner.class.isAssignableFrom(scanner.getClass()), is(true));
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionWhenNoSchemeGiven() {
-        new ScannerFactory().getScanner(null);
+        new ScannerRegistry().getScanner(null);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionWhenEmptySchemeGiven() {
-        new ScannerFactory().getScanner("");
+        new ScannerRegistry().getScanner("");
     }
 }

@@ -19,7 +19,7 @@ import static java.util.Collections.emptySet;
  *
  * @author Patrick Kranz
  */
-public class FileSystemLocationScanner implements ClassPathLocationScanner {
+public class FileSystemLocationScanner implements LocationScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(FileSystemLocationScanner.class);
     private static final String UTF_8 = "UTF-8";
 

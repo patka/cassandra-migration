@@ -43,7 +43,7 @@ public class JarLocationScannerTest {
 
     @Test
     public void shouldReturnTwoResourcesWhenJarFileWithOneScriptGiven() throws Exception {
-        ClassPathLocationScanner scanner = new JarLocationScanner();
+        LocationScanner scanner = new JarLocationScanner();
         Set<String> resourceNames = scanner.findResourceNames("/", jarUri);
         assertThat(resourceNames.size(), is(equalTo(2)));
         assertThat(resourceNames.contains("1_init.cql"), is(true));
@@ -52,7 +52,7 @@ public class JarLocationScannerTest {
 
     @Test(expected = NoSuchFileException.class)
     public void shouldThrowExceptionWhenNonExistingPathGiven() throws IOException {
-        ClassPathLocationScanner scanner = new JarLocationScanner();
+        LocationScanner scanner = new JarLocationScanner();
         Set<String> resourceNames = scanner.findResourceNames("/nonThere", jarUri);
         assertThat(resourceNames.size(), is(equalTo(0)));
     }

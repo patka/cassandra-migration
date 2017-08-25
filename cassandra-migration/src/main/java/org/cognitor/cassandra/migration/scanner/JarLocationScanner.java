@@ -18,7 +18,7 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
  *
  * @author Pavel Borsky
  */
-public class JarLocationScanner implements ClassPathLocationScanner {
+public class JarLocationScanner implements LocationScanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(JarLocationScanner.class);
 
     /**

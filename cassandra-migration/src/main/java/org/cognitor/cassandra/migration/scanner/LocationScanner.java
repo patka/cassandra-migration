@@ -9,7 +9,7 @@ import java.util.Set;
  *
  * @author Patrick Kranz
  */
-public interface ClassPathLocationScanner {
+public interface LocationScanner {
     /**
      * Finds the resource names below this location on the classpath under this locationUrl.
      *

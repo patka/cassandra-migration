@@ -1,11 +1,10 @@
 package org.cognitor.cassandra.migration;
 
-import org.cognitor.cassandra.migration.scanner.ClassPathLocationScanner;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
-
-import org.cognitor.cassandra.migration.scanner.ScannerFactory;
+import org.cognitor.cassandra.migration.scanner.LocationScanner;
+import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,7 +14,9 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
@@ -72,7 +73,7 @@ public class MigrationRepository {
 
     private final String scriptPath;
     private final Pattern commentPattern;
-    private final ScannerFactory scannerFactory;
+    private final ScannerRegistry scannerRegistry;
     private List<ScriptFile> migrationScripts;
     private final ScriptCollector scriptCollector;
 
@@ -110,10 +111,23 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector) {
+        this(scriptPath, scriptCollector, new ScannerRegistry());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPath and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @param scannerRegistry A ScannerRegistry to create LocationScanner instances. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
+        this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
-        this.scannerFactory = new ScannerFactory();
         try {
             migrationScripts = scanForScripts(scriptPath);
         } catch (IOException | URISyntaxException exception) {
@@ -160,7 +174,11 @@ public class MigrationRepository {
         while (scriptResources.hasMoreElements()) {
             URI script = scriptResources.nextElement().toURI();
             LOGGER.debug("Potential script folder: {}", script.toString());
-            ClassPathLocationScanner scanner = scannerFactory.getScanner(script.getScheme());
+            if (!scannerRegistry.supports(script.getScheme())) {
+                LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.");
+                continue;
+            }
+            LocationScanner scanner = scannerRegistry.getScanner(script.getScheme());
             for (String resource : scanner.findResourceNames(scriptPath, script)) {
                 if (isMigrationScript(resource)) {
                     String scriptName = extractScriptName(resource);
