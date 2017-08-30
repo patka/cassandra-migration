@@ -2,13 +2,19 @@
 This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
+## Known Issues:
+* Issue 14: Java functions are wrongly interpreted as statements by its own
+
 ## Unreleased
+
+## Released
+### v2.1.0
+* Issue 13: You can now register your own LocationScanner implementations
 * Issue 8: It is now possible to create a keyspace as part of the initial
   migration.
 * Issue 9: Fixing an issue when cassandra-migration is used in an uber-jar that
   can lead to FileSystemAlreadyExistsException
 
-## Released
 ### v2.0.0
 * added a new interface ScriptCollector that can be used to implement different
   behaviors of which scripts are considered by the MigrationRepository
