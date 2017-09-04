@@ -23,24 +23,24 @@ public class MigrationRepositoryTest {
     }
 
     @Test
-    public void shouldReturnTwoAsLatestVersionWhenTwoScriptsInResourcesGiven() {
+    public void shouldReturnThreeAsLatestVersionWhenThreeScriptsInResourcesGiven() {
         int version = migrationRepository.getLatestVersion();
-        assertThat(version, is(equalTo(2)));
+        assertThat(version, is(equalTo(3)));
     }
 
     @Test
     public void shouldReturnOneScriptWhenRequestForAllScriptsSinceVersionTwoGiven() {
-        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(2);
         assertThat(scripts.size(), is(equalTo(1)));
-        assertThat(scripts.get(0).getVersion(), is(equalTo(2)));
+        assertThat(scripts.get(0).getVersion(), is(equalTo(3)));
     }
 
     @Test
     public void shouldReturnTwoScriptsWhenRequestForAllScriptsSinceVersionOneGiven() {
-        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(0);
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
         assertThat(scripts.size(), is(equalTo(2)));
-        assertThat(scripts.get(0).getVersion(), is(equalTo(1)));
-        assertThat(scripts.get(1).getVersion(), is(equalTo(2)));
+        assertThat(scripts.get(0).getVersion(), is(equalTo(2)));
+        assertThat(scripts.get(1).getVersion(), is(equalTo(3)));
         assertThat(scripts.get(0).getMigrationScript().isEmpty(), is(false));
         assertThat(scripts.get(1).getMigrationScript().isEmpty(), is(false));
     }

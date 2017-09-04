@@ -70,8 +70,8 @@ public class MigrationRepository {
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
     private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while scanning script folder for new scripts.";
     private static final String READING_SCRIPT_ERROR_MSG = "Error while reading script %s";
+    private static final String PATH_SEPARATOR_CHAR = "/";
 
-    private final String scriptPath;
     private final Pattern commentPattern;
     private final ScannerRegistry scannerRegistry;
     private List<ScriptFile> migrationScripts;
@@ -125,11 +125,10 @@ public class MigrationRepository {
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
-        this.scriptPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
-            migrationScripts = scanForScripts(scriptPath);
+            migrationScripts = scanForScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
         } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }
@@ -197,8 +196,15 @@ public class MigrationRepository {
 
     private static int extractScriptVersion(String scriptName) {
         String[] splittedName = scriptName.split(VERSION_NAME_DELIMITER);
+        int folderSeperatorPos = splittedName[0].lastIndexOf(PATH_SEPARATOR_CHAR);
+        String versionString;
+        if (folderSeperatorPos >= 0) {
+            versionString = splittedName[0].substring(folderSeperatorPos + 1);
+        } else {
+            versionString = splittedName[0];
+        }
         try {
-            return parseInt(splittedName[0]);
+            return parseInt(versionString);
         } catch (NumberFormatException exception) {
             throw new MigrationException(format(EXTRACT_VERSION_ERROR_MSG, scriptName),
                     exception, scriptName);
@@ -210,7 +216,11 @@ public class MigrationRepository {
     }
 
     private String extractScriptName(String resourceName) {
-        return resourceName.substring(scriptPath.length());
+        int slashIndex = resourceName.lastIndexOf(PATH_SEPARATOR_CHAR);
+        if (slashIndex > -1) {
+            return resourceName.substring(slashIndex + 1);
+        }
+        return resourceName;
     }
 
     /**
