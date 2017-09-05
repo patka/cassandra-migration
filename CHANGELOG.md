@@ -6,6 +6,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Issue 14: Java functions are wrongly interpreted as statements by its own
 
 ## Unreleased
+* Issue 16: Scripts can now be placed in subfolders inside the resources folder.
 
 ## Released
 ### v2.1.0
