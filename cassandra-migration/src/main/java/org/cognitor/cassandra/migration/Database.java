@@ -2,6 +2,7 @@ package org.cognitor.cassandra.migration;
 
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
+import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -167,7 +168,8 @@ public class Database implements Closeable {
                 migration.getVersion()));
         String lastStatement = null;
         try {
-            for (String statement : migration.getMigrationScript().split(STATEMENT_DELIMITER)) {
+            SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
+            for (String statement : lexer.getCqlQueries()) {
                 statement = statement.trim();
                 lastStatement = statement;
                 executeStatement(statement);

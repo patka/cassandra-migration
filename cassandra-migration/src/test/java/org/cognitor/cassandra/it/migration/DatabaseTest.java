@@ -24,7 +24,6 @@ import static org.junit.Assert.assertThat;
  */
 public class DatabaseTest {
 
-    private static final String SUCCESSFUL_MIGRATIONS = "cassandra/migrationtest/successful";
     @Rule
     public final CassandraJUnitRule cassandra = new CassandraJUnitRule(DEFAULT_SCRIPT_LOCATION, "cassandra.yml");
 
@@ -115,6 +114,16 @@ public class DatabaseTest {
         assertThat(keyspaceMetadata.getReplication().get("class"),
                 is(equalTo("org.apache.cassandra.locator.NetworkTopologyStrategy")));
         assertThat(keyspaceMetadata.getReplication().get("dc1"), is(equalTo("1")));
+    }
+
+    @Test
+    public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
+        MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/function"));
+        migrationTask.migrate();
+        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        assertThat(database.getVersion(), is(equalTo(1)));
+        assertThat(cassandra.getCluster().getMetadata()
+                .getKeyspace(CassandraJUnitRule.TEST_KEYSPACE).getFunctions().size(), is(equalTo(1)));
     }
 
     private List<Row> loadMigrations() {
