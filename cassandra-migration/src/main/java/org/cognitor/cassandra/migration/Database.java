@@ -53,11 +53,6 @@ public class Database implements Closeable {
      */
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
-    /**
-     * The delimiter that is used between two cql statements.
-     */
-    private static final String STATEMENT_DELIMITER = ";";
-
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final Cluster cluster;
