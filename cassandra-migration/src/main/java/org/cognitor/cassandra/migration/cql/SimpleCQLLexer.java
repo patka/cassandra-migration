@@ -3,6 +3,19 @@ package org.cognitor.cassandra.migration.cql;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * The original code was written and published by Steve Nicolai in his
+ * <a href="https://github.com/jsevellec/cassandra-unit>cassandra-unit</a> project.
+ * To be complient with this license. This code inside this class therefore is licensed
+ * in the context of the LGPL license as well. The license text can be found in the
+ * root folder of this project.
+ *
+ * see the full CQL grammar at:
+ * https://github.com/apache/cassandra/blob/trunk/src/java/org/apache/cassandra/cql3/Cql.g
+ *
+ * This parser a series of lines, removes comments and breaks the lines into statements
+ * at semicolon boundaries.
+ */
 public class SimpleCQLLexer {
     private enum LexState {
         DEFAULT,
