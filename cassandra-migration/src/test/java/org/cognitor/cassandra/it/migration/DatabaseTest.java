@@ -80,7 +80,7 @@ public class DatabaseTest {
         assertThat(exception, is(not(nullValue())));
         assertThat(exception.getMessage(), is(not(nullValue())));
         assertThat(exception.getScriptName(), is(equalTo("001_init.cql")));
-        assertThat(exception.getStatement(), is(equalTo("CREATE TABLE PERSON (id uuid primary key, name varcha)")));
+        assertThat(exception.getStatement(), is(equalTo("CREATE TABLE PERSON (id uuid primary key, name varcha);")));
 
         List<Row> results = loadMigrations();
         assertThat(results.size(), is(equalTo(1)));
