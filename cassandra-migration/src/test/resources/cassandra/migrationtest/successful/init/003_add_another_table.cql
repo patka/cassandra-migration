@@ -1,0 +1,1 @@
+CREATE TABLE THINGS (thing_id uuid primary key, thing_name varchar);

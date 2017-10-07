@@ -45,10 +45,10 @@ public class DatabaseTest {
         migrationTask.migrate();
         // after migration the database object is closed
         database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
-        assertThat(database.getVersion(), is(equalTo(2)));
+        assertThat(database.getVersion(), is(equalTo(3)));
 
         List<Row> results = loadMigrations();
-        assertThat(results.size(), is(equalTo(2)));
+        assertThat(results.size(), is(equalTo(3)));
         assertThat(results.get(0).getBool("applied_successful"), is(true));
         assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
         assertThat(results.get(0).getString("script_name"), is(equalTo("001_init.cql")));
@@ -57,6 +57,10 @@ public class DatabaseTest {
         assertThat(results.get(1).getTimestamp("executed_at"), is(not(nullValue())));
         assertThat(results.get(1).getString("script_name"), is(equalTo("002_add_events_table.cql")));
         assertThat(results.get(1).getString("script"), is(equalTo("CREATE TABLE EVENTS (event_id uuid primary key, event_name varchar);")));
+        assertThat(results.get(2).getBool("applied_successful"), is(true));
+        assertThat(results.get(2).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(2).getString("script_name"), is(equalTo("003_add_another_table.cql")));
+        assertThat(results.get(2).getString("script"), is(equalTo("CREATE TABLE THINGS (thing_id uuid primary key, thing_name varchar);")));
     }
 
     @Test
