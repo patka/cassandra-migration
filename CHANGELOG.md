@@ -2,12 +2,12 @@
 This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
-## Known Issues:
-* Issue 14: Java functions are wrongly interpreted as statements by its own
-
 ## Unreleased
 
 ## Released
+### v2.1.1
+* Issue 15: Java functions can now be created via migration scripts
+
 ### v2.1.0
 * Issue 13: You can now register your own LocationScanner implementations
 * Issue 8: It is now possible to create a keyspace as part of the initial
