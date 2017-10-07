@@ -5,7 +5,9 @@ import java.util.List;
 
 /**
  * The original code was written and published by Steve Nicolai in his
- * <a href="https://github.com/jsevellec/cassandra-unit>cassandra-unit</a> project.
+ * cassandra-unit project which can be found here:
+ * https://github.com/jsevellec/cassandra-unit
+ *
  * To be complient with this license. This code inside this class therefore is licensed
  * in the context of the LGPL license as well. The license text can be found in the
  * root folder of this project.
