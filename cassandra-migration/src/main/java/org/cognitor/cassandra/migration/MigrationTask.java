@@ -50,9 +50,11 @@ public class MigrationTask {
     /**
      * Start the actual migration. Take the version of the database, get all required migrations and execute them or do
      * nothing if the DB is already up to date.
+     * If checksumValidation flag is true, get all existing migration and compare their checksum.
      *
      * At the end the underlying database instance is closed.
      *
+     * @return The number of migrated scripts. for any error, -1 is returned.
      * @throws MigrationException if a migration fails
      */
     public int migrate() {
