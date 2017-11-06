@@ -12,6 +12,7 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 class DbMigration {
     private final String migrationScript;
     private final String scriptName;
+    private final String checksum;
     private final int version;
 
     /**
@@ -21,9 +22,10 @@ class DbMigration {
      * @param version         the schema version this migration will result to.
      * @param migrationScript the migration steps in cql. Must not be null.
      */
-    public DbMigration(String scriptName, int version, String migrationScript) {
+    public DbMigration(String scriptName, int version, String migrationScript, String checksum) {
         this.migrationScript = notNull(migrationScript, "migrationScript");
         this.scriptName = notNullOrEmpty(scriptName, "scriptName");
+        this.checksum = checksum;
         this.version = version;
     }
 
@@ -35,6 +37,10 @@ class DbMigration {
         return scriptName;
     }
 
+    public String getChecksum() {
+        return checksum;
+    }
+    
     public int getVersion() {
         return version;
     }

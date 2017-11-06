@@ -5,6 +5,7 @@ import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
 import org.cognitor.cassandra.migration.scanner.LocationScanner;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
+import org.cognitor.cassandra.migration.util.ChecksumUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -235,12 +236,20 @@ public class MigrationRepository {
     public List<DbMigration> getMigrationsSinceVersion(int version) {
         List<DbMigration> dbMigrations = new ArrayList<>();
         migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
-            String content = loadScriptContent(script);
-            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
+            dbMigrations.add(createDbMigration(script));
         });
         return dbMigrations;
     }
 
+    private DbMigration createDbMigration(ScriptFile script) {
+        String content = loadScriptContent(script);
+        String checksum= ChecksumUtil.encryptSHA512(content);
+        if (checksum == null) {
+            throw new MigrationException(String.format("Checksum of script %s is null", script.getScriptName()), script.getScriptName());
+        }
+        return new DbMigration(script.getScriptName(), script.getVersion(), content, checksum);
+    }
+    
     private String loadScriptContent(ScriptFile script) {
         try {
             return readResourceFileAsString(script.getResourceName(), getClass().getClassLoader());
