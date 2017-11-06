@@ -39,7 +39,7 @@ public class Database implements Closeable {
      * Statement used to create the table that manages the migrations.
      */
     private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
-            + " (applied_successful boolean, version int, script_name varchar, script text, checksum text,"
+            + " (applied_successful boolean, version int, script_name varchar, script text, checksum int,"
             + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
 
     /**
@@ -131,13 +131,13 @@ public class Database implements Closeable {
         return result.getInt(0);
     }
 
-    public String getScriptChecksum(int scriptVersion) {
+    public Integer getScriptChecksum(int scriptVersion) {
         ResultSet resultSet = session.execute(format(CHECKSUM_QUERY, SCHEMA_CF, scriptVersion));
         Row result = resultSet.one();
         if (result == null) {
             return null;
         }
-        return result.getString(0);
+        return result.getInt(0);
     }
     
     /**
@@ -174,15 +174,15 @@ public class Database implements Closeable {
         notNull(migration, "migration");
         LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
         
-        String submittedChecksum = getScriptChecksum(migration.getVersion());
+        Integer submittedChecksum = getScriptChecksum(migration.getVersion());
         //check if the migration version exist
         if (submittedChecksum == null) {
         	return String.format("Script version %d not found", migration.getVersion());
         }
         
-        String currentChecksum= ChecksumUtil.encryptSHA512(migration.getMigrationScript());
+        int currentChecksum= ChecksumUtil.calculateCRC32(migration.getMigrationScript());
         if (!submittedChecksum.equals(currentChecksum)) {
-        	return String.format("Checksum validation error: %s vs %s", submittedChecksum, currentChecksum);
+        	return String.format("Checksum validation error: %d vs %d", submittedChecksum, currentChecksum);
         }
         
         //validation succeeded

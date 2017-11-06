@@ -236,18 +236,11 @@ public class MigrationRepository {
     public List<DbMigration> getMigrationsSinceVersion(int version) {
         List<DbMigration> dbMigrations = new ArrayList<>();
         migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
-            dbMigrations.add(createDbMigration(script));
+        	String content = loadScriptContent(script);
+            int checksum= ChecksumUtil.calculateCRC32(content);
+            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content, checksum));
         });
         return dbMigrations;
-    }
-
-    private DbMigration createDbMigration(ScriptFile script) {
-        String content = loadScriptContent(script);
-        String checksum= ChecksumUtil.encryptSHA512(content);
-        if (checksum == null) {
-            throw new MigrationException(String.format("Checksum of script %s is null", script.getScriptName()), script.getScriptName());
-        }
-        return new DbMigration(script.getScriptName(), script.getVersion(), content, checksum);
     }
     
     private String loadScriptContent(ScriptFile script) {
