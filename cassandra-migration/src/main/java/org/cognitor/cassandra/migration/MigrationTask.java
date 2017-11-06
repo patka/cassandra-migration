@@ -64,10 +64,10 @@ public class MigrationTask {
         int databaseVersion = database.getVersion();
         for (DbMigration dbMigration : migrations) {
             if (dbMigration.getVersion() <= databaseVersion) {
-                // check validation
-                boolean checksumResult = database.validateChecksum(dbMigration);
-                if (!checksumResult) {
-                    LOGGER.error(format("Validate script %d checksum failed", database.getVersion()));
+            	// check validation
+                String errorMessage = database.validateChecksum(dbMigration);
+                if (errorMessage != null) {
+                    LOGGER.error(String.format("Script %d validation failed: ", dbMigration.getVersion(), errorMessage));
                     return -1;
                 }
             } else {
@@ -75,6 +75,10 @@ public class MigrationTask {
                 database.execute(dbMigration);
                 migratedScripts++;
             }
+        }
+        
+        if (this.checksumValidation) {
+        	LOGGER.info(format("Keyspace %s validation ended successfully", database.getKeyspaceName(), database.getVersion()));
         }
         
         LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));

@@ -170,13 +170,23 @@ public class Database implements Closeable {
      * Calculate script checksum and compare it to committed checksum
      * @param migration
      */
-    public boolean validateChecksum(DbMigration migration) {
+    public String validateChecksum(DbMigration migration) {
         notNull(migration, "migration");
         LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
         
         String submittedChecksum = getScriptChecksum(migration.getVersion());
+        //check if the migration version exist
+        if (submittedChecksum == null) {
+        	return String.format("Script version %d not found", migration.getVersion());
+        }
+        
         String currentChecksum= ChecksumUtil.encryptSHA512(migration.getMigrationScript());
-        return submittedChecksum.equals(currentChecksum);
+        if (!submittedChecksum.equals(currentChecksum)) {
+        	return String.format("Checksum validation error: %s vs %s", submittedChecksum, currentChecksum);
+        }
+        
+        //validation succeeded
+        return null;
     }
     
     /**
