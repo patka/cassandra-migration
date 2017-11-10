@@ -94,7 +94,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.1.0</version>
+      <version>2.1.1</version>
   </dependency>
 ```
 
@@ -104,8 +104,8 @@ the migration. You have to include the following dependency to make it work:
 ```xml
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
-      <artifactId>cassandra-migration-spring-boot-stater</artifactId>
-      <version>2.1.0</version>
+      <artifactId>cassandra-migration-spring-boot-starter</artifactId>
+      <version>2.1.1</version>
   </dependency>
 ```
 
