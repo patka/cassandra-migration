@@ -6,7 +6,7 @@ import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
-import org.cognitor.cassandra.migration.keyspace.Keyspace;
+import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.junit.Before;
 import org.junit.Rule;
@@ -95,7 +95,7 @@ public class DatabaseTest {
     @Test
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndKeyspaceDefinitionGiven() {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("new_keyspace"), is(nullValue()));
-        Keyspace keyspace = new Keyspace("new_keyspace");
+        KeyspaceDefinition keyspace = new KeyspaceDefinition("new_keyspace");
         Database db = new Database(cassandra.getCluster(), keyspace);
 
         KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("new_keyspace");
@@ -109,7 +109,7 @@ public class DatabaseTest {
     @Test
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndNetworkKeyspaceDefinitionGiven() {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("network_keyspace"), is(nullValue()));
-        Keyspace keyspace = new Keyspace("network_keyspace")
+        KeyspaceDefinition keyspace = new KeyspaceDefinition("network_keyspace")
                 .with(new NetworkStrategy().with("dc1", 1));
         Database db = new Database(cassandra.getCluster(), keyspace);
 

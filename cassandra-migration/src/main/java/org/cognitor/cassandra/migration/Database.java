@@ -3,7 +3,7 @@ package org.cognitor.cassandra.migration;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
-import org.cognitor.cassandra.migration.keyspace.Keyspace;
+import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,17 +54,32 @@ public class Database implements Closeable {
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
     private final String keyspaceName;
-    private final Keyspace keyspace;
+    private final KeyspaceDefinition keyspace;
     private final Cluster cluster;
     private final Session session;
     private final PreparedStatement logMigrationStatement;
+    private Configuration configuration = new Configuration();
 
-
-    public Database(Cluster cluster, Keyspace keyspace) {
+    public Database(Cluster cluster, KeyspaceDefinition keyspace) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspace = notNull(keyspace, "keyspace");
         this.keyspaceName = keyspace.getKeyspaceName();
         createKeyspaceIfRequired();
+        session = cluster.connect(keyspaceName);
+        ensureSchemaTable();
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+    }
+
+    /**
+     * Creates a new instance of the database.
+     *
+     * @param cluster      the cluster that is connected to a cassandra instance
+     * @param keyspaceName the keyspace name that will be managed by this instance
+     */
+    public Database(Cluster cluster, String keyspaceName) {
+        this.cluster = notNull(cluster, "cluster");
+        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
+        this.keyspace = null;
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
         this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
@@ -82,22 +97,7 @@ public class Database implements Closeable {
     }
 
     private boolean keyspaceExists() {
-        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
-    }
-
-    /**
-     * Creates a new instance of the database.
-     *
-     * @param cluster      the cluster that is connected to a cassandra instance
-     * @param keyspaceName the keyspace name that will be managed by this instance
-     */
-    public Database(Cluster cluster, String keyspaceName) {
-        this.cluster = notNull(cluster, "cluster");
-        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
-        this.keyspace = null;
-        session = cluster.connect(keyspaceName);
-        ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        return cluster.getMetadata().getKeyspace(keyspaceName) != null;
     }
 
     /**
@@ -182,7 +182,7 @@ public class Database implements Closeable {
     private void executeStatement(String statement) {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = new SimpleStatement(statement);
-            simpleStatement.setConsistencyLevel(ConsistencyLevel.QUORUM);
+            simpleStatement.setConsistencyLevel(configuration.getConsistencyLevel());
             session.execute(simpleStatement);
         }
     }
@@ -197,5 +197,9 @@ public class Database implements Closeable {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
+    }
+
+    public void setConfiguration(Configuration configuration) {
+        this.configuration = notNull(configuration, "configuration");
     }
 }
