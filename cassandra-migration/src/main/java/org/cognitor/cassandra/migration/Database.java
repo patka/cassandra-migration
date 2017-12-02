@@ -12,7 +12,6 @@ import java.util.Date;
 
 import static java.lang.String.format;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
-import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
  * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
@@ -53,34 +52,20 @@ public class Database implements Closeable {
      */
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
-    private final String keyspaceName;
     private final KeyspaceDefinition keyspace;
     private final Cluster cluster;
     private final Session session;
     private final PreparedStatement logMigrationStatement;
-    private Configuration configuration = new Configuration();
+    private final Configuration configuration;
 
-    public Database(Cluster cluster, KeyspaceDefinition keyspace) {
+    public Database(Cluster cluster, Configuration configuration) {
         this.cluster = notNull(cluster, "cluster");
-        this.keyspace = notNull(keyspace, "keyspace");
-        this.keyspaceName = keyspace.getKeyspaceName();
-        createKeyspaceIfRequired();
-        session = cluster.connect(keyspaceName);
-        ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
-    }
-
-    /**
-     * Creates a new instance of the database.
-     *
-     * @param cluster      the cluster that is connected to a cassandra instance
-     * @param keyspaceName the keyspace name that will be managed by this instance
-     */
-    public Database(Cluster cluster, String keyspaceName) {
-        this.cluster = notNull(cluster, "cluster");
-        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
-        this.keyspace = null;
-        session = cluster.connect(keyspaceName);
+        this.configuration = notNull(configuration, "configuration");
+        this.keyspace = configuration.getKeyspaceDefinition();
+        if (configuration.isCreateKeyspace()) {
+            createKeyspaceIfRequired();
+        }
+        session = cluster.connect(keyspace.getKeyspaceName());
         ensureSchemaTable();
         this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
     }
@@ -92,12 +77,12 @@ public class Database implements Closeable {
         try (Session session = this.cluster.connect()) {
             session.execute(this.keyspace.getCqlStatement());
         } catch (DriverException exception) {
-            throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
+            throw new MigrationException(format("Unable to create keyspace %s.", keyspace.getKeyspaceName()), exception);
         }
     }
 
     private boolean keyspaceExists() {
-        return cluster.getMetadata().getKeyspace(keyspaceName) != null;
+        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
     }
 
     /**
@@ -130,7 +115,7 @@ public class Database implements Closeable {
      * @return the name of the keyspace managed by this instance
      */
     public String getKeyspaceName() {
-        return this.keyspaceName;
+        return this.keyspace.getKeyspaceName();
     }
 
     /**
@@ -143,7 +128,7 @@ public class Database implements Closeable {
     }
 
     private boolean schemaTablesIsNotExisting() {
-        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(SCHEMA_CF) == null;
+        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()).getTable(SCHEMA_CF) == null;
     }
 
     private void createSchemaTable() {
@@ -197,9 +182,5 @@ public class Database implements Closeable {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
-    }
-
-    public void setConfiguration(Configuration configuration) {
-        this.configuration = notNull(configuration, "configuration");
     }
 }

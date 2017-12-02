@@ -41,7 +41,8 @@ public class CassandraMigrationAutoConfiguration {
         }
 
         MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cluster, properties.getKeyspaceName()),
+        return new MigrationTask(new Database(cluster,
+                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())),
                 migrationRepository);
     }
 

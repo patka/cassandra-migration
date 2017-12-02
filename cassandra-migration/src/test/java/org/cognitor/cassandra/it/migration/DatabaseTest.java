@@ -2,10 +2,8 @@ package org.cognitor.cassandra.it.migration;
 
 import com.datastax.driver.core.*;
 import org.cognitor.cassandra.CassandraJUnitRule;
-import org.cognitor.cassandra.migration.Database;
-import org.cognitor.cassandra.migration.MigrationException;
-import org.cognitor.cassandra.migration.MigrationRepository;
-import org.cognitor.cassandra.migration.MigrationTask;
+import org.cognitor.cassandra.migration.Configuration;
+import org.cognitor.cassandra.migration.*;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.junit.Before;
@@ -31,7 +29,7 @@ public class DatabaseTest {
 
     @Before
     public void setUp() {
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
     }
 
     @Test
@@ -44,7 +42,7 @@ public class DatabaseTest {
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
         migrationTask.migrate();
         // after migration the database object is closed
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(3)));
 
         List<Row> results = loadMigrations();
@@ -96,7 +94,7 @@ public class DatabaseTest {
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndKeyspaceDefinitionGiven() {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("new_keyspace"), is(nullValue()));
         KeyspaceDefinition keyspace = new KeyspaceDefinition("new_keyspace");
-        Database db = new Database(cassandra.getCluster(), keyspace);
+        Database db = new Database(cassandra.getCluster(), new Configuration(keyspace).setCreateKeyspace(true));
 
         KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("new_keyspace");
         assertThat(keyspaceMetadata, is(notNullValue()));
@@ -111,7 +109,7 @@ public class DatabaseTest {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("network_keyspace"), is(nullValue()));
         KeyspaceDefinition keyspace = new KeyspaceDefinition("network_keyspace")
                 .with(new NetworkStrategy().with("dc1", 1));
-        Database db = new Database(cassandra.getCluster(), keyspace);
+        Database db = new Database(cassandra.getCluster(), new Configuration(keyspace).setCreateKeyspace(true));
 
         KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("network_keyspace");
         assertThat(keyspaceMetadata, is(notNullValue()));
@@ -124,7 +122,7 @@ public class DatabaseTest {
     public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/function"));
         migrationTask.migrate();
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(1)));
         assertThat(cassandra.getCluster().getMetadata()
                 .getKeyspace(CassandraJUnitRule.TEST_KEYSPACE).getFunctions().size(), is(equalTo(1)));
