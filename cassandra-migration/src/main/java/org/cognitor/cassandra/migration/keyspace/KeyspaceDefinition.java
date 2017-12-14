@@ -10,12 +10,12 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
  *
  * @author Patrick Kranz
  */
-public class Keyspace {
+public class KeyspaceDefinition {
     private final String keyspaceName;
     private boolean durableWrites;
     private ReplicationStrategy replicationStrategy;
 
-    public Keyspace(String keyspaceName) {
+    public KeyspaceDefinition(String keyspaceName) {
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
         this.replicationStrategy = new SimpleStrategy();
         this.durableWrites = true;
@@ -31,14 +31,14 @@ public class Keyspace {
      * This behavior is not recommended and should not be done
      * with SimpleStrategy replication.
      *
-     * @return the current Keyspace instance
+     * @return the current KeyspaceDefinition instance
      */
-    public Keyspace withoutDurableWrites() {
+    public KeyspaceDefinition withoutDurableWrites() {
         this.durableWrites = false;
         return this;
     }
 
-    public Keyspace with(ReplicationStrategy replicationStrategy) {
+    public KeyspaceDefinition with(ReplicationStrategy replicationStrategy) {
         this.replicationStrategy = notNull(replicationStrategy, "replicationStrategy");
         return this;
     }
@@ -52,13 +52,11 @@ public class Keyspace {
     }
 
     public String getCqlStatement() {
-        StringBuilder builder = new StringBuilder(60);
-        builder.append("CREATE KEYSPACE IF NOT EXISTS ")
-                .append(getKeyspaceName())
-                .append(" WITH REPLICATION = ")
-                .append(getReplicationStrategy().createCqlStatement())
-                .append(" AND DURABLE_WRITES = ")
-                .append(Boolean.toString(isDurableWrites()));
-        return builder.toString();
+        return "CREATE KEYSPACE IF NOT EXISTS " +
+                getKeyspaceName() +
+                " WITH REPLICATION = " +
+                getReplicationStrategy().createCqlStatement() +
+                " AND DURABLE_WRITES = " +
+                Boolean.toString(isDurableWrites());
     }
 }
