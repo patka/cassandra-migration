@@ -4,7 +4,10 @@ import com.datastax.driver.core.Cluster;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
+import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
+import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
+import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration;
@@ -46,9 +49,11 @@ public class CassandraMigrationAutoConfiguration {
     }
 
     private MigrationRepository createRepository() {
+        ScannerRegistry registry = new ScannerRegistry();
+        registry.register(ScannerRegistry.JAR_SCHEME, new SpringBootLocationScanner());
         if (properties.getStrategy() == ScriptCollectorStrategy.FAIL_ON_DUPLICATES) {
-            return new MigrationRepository(properties.getScriptLocation());
+            return new MigrationRepository(properties.getScriptLocation(), new FailOnDuplicatesCollector(), registry);
         }
-        return new MigrationRepository(properties.getScriptLocation(), new IgnoreDuplicatesCollector());
+        return new MigrationRepository(properties.getScriptLocation(), new IgnoreDuplicatesCollector(), registry);
     }
 }
