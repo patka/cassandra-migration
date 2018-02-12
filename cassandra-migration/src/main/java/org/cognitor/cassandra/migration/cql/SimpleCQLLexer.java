@@ -8,7 +8,7 @@ import java.util.List;
  * cassandra-unit project which can be found here:
  * https://github.com/jsevellec/cassandra-unit
  *
- * To be complient with this license. This code inside this class therefore is licensed
+ * To be compliant with this license. This code inside this class therefore is licensed
  * in the context of the LGPL license as well. The license text can be found in the
  * root folder of this project.
  *
@@ -24,7 +24,7 @@ public class SimpleCQLLexer {
         IN_SINGLE_LINE_COMMENT,
         IN_MULTI_LINE_COMMENT,
         IN_QUOTE_STRING,
-        IN_SQUOTE_STRING;
+        IN_SQUOTE_STRING
     }
 
     private final String text;
