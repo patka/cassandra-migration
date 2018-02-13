@@ -3,9 +3,12 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
-* Issue 16: Scripts can now be placed in subfolders inside the resources folder.
 
 ## Released
+### v2.1.2
+* Issue 18: Scripts can be found if run inside a Spring Boot fat jar
+* Issue 16: Scripts can now be placed in subfolders inside the resources folder.
+
 ### v2.1.1
 * Issue 15: Java functions can now be created via migration scripts
 
