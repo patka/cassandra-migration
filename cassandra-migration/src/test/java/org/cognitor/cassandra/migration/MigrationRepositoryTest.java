@@ -1,15 +1,13 @@
 package org.cognitor.cassandra.migration;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertThat;
 
 /**
  * @author Patrick Kranz
@@ -78,10 +76,10 @@ public class MigrationRepositoryTest {
     }
 
     @Test
-    public void shouldIgnoreComments() {
+    public void shouldNotIgnoreComments() {
         List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
-        assertThat(scripts.get(0).getMigrationScript().contains("--"), is(false));
-        assertThat(scripts.get(0).getMigrationScript().contains("//"), is(false));
+        assertThat(scripts.get(0).getMigrationScript().contains("--"), is(true));
+        assertThat(scripts.get(0).getMigrationScript().contains("//"), is(true));
     }
 
 }

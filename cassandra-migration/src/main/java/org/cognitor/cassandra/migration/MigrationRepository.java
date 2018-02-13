@@ -8,21 +8,19 @@ import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
+import static java.nio.file.Files.readAllBytes;
+import static java.nio.file.Paths.get;
 import static java.util.Collections.sort;
-import static java.util.regex.Pattern.compile;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
@@ -60,19 +58,12 @@ public class MigrationRepository {
      */
     public static final String VERSION_NAME_DELIMITER = "_";
 
-    /**
-     * Pattern matching the prefixes that can be put in the beginning of a line to indicate a single line comment.
-     * Any line matching this pattern will be ignored.
-     */
-    public static final String SINGLE_LINE_COMMENT_PATTERN = "(^--.*)|(^//.*)";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";
     private static final String SCANNING_SCRIPT_FOLDER_ERROR_MSG = "Error while scanning script folder for new scripts.";
     private static final String READING_SCRIPT_ERROR_MSG = "Error while reading script %s";
     private static final String PATH_SEPARATOR_CHAR = "/";
 
-    private final Pattern commentPattern;
     private final ScannerRegistry scannerRegistry;
     private List<ScriptFile> migrationScripts;
     private final ScriptCollector scriptCollector;
@@ -126,7 +117,6 @@ public class MigrationRepository {
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
-        this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
             migrationScripts = scanForScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
         } catch (IOException | URISyntaxException exception) {
@@ -251,14 +241,14 @@ public class MigrationRepository {
     }
 
     private String readResourceFileAsString(String resourceName, ClassLoader classLoader) throws IOException {
-        StringBuilder fileContent = new StringBuilder(256);
-        new BufferedReader(
-                new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().filter(line -> !isLineComment(line)).forEach(fileContent::append);
-        return fileContent.toString();
-    }
-
-    private boolean isLineComment(String line) {
-        return commentPattern.matcher(line).matches();
+        try {
+            final URL resource = classLoader.getResource(resourceName);
+            if (resource == null) {
+                throw new IOException(String.format("Unable to find resource '%s", resourceName));
+            }
+            return new String(readAllBytes(get(resource.toURI())), SCRIPT_ENCODING);
+        } catch (URISyntaxException exception) {
+            throw new IOException(format("Unable to read resource '%s'", resourceName), exception);
+        }
     }
 }
