@@ -21,40 +21,72 @@ public class MigrationTask {
 
     private final Database database;
     private final MigrationRepository repository;
+    private final boolean checksumValidation;
 
     /**
      * Creates a migration task that uses the given database and repository.
+     * Set checksum validation to false.
      *
      * @param database   the database that should be migrated
      * @param repository the repository that contains the migration scripts
      */
     public MigrationTask(Database database, MigrationRepository repository) {
+        this(database, repository, false);
+    }
+    
+    /**
+     * Creates a migration task that uses the given database, repository and validation flag.
+     *
+     * @param database   the database that should be migrated
+     * @param repository the repository that contains the migration scripts
+     * @param checksumValidation flag that indicate if to validate checksums
+     */
+    public MigrationTask(Database database, MigrationRepository repository, boolean checksumValidation) {
         this.database = notNull(database, "database");
         this.repository = notNull(repository, "repository");
+        this.checksumValidation= checksumValidation;
     }
-
+    
     /**
      * Start the actual migration. Take the version of the database, get all required migrations and execute them or do
      * nothing if the DB is already up to date.
+     * If checksumValidation flag is true, get all existing migration and compare their checksum.
      *
      * At the end the underlying database instance is closed.
      *
+     * @return The number of migrated scripts. for any error, -1 is returned.
      * @throws MigrationException if a migration fails
      */
-    public void migrate() {
-        if (databaseIsUpToDate()) {
-            LOGGER.info(format("Keyspace %s is already up to date at version %d", database.getKeyspaceName(),
-                    database.getVersion()));
-            return;
+    public int migrate() {
+        List<DbMigration> migrations = repository.getMigrationsSinceVersion(getRequestedVersion());
+        
+        int migratedScripts= 0;
+        int databaseVersion = database.getVersion();
+        for (DbMigration dbMigration : migrations) {
+            if (dbMigration.getVersion() <= databaseVersion) {
+            	// check validation
+                String errorMessage = database.validateChecksum(dbMigration);
+                if (errorMessage != null) {
+                    LOGGER.error(String.format("Script %d validation failed: ", dbMigration.getVersion(), errorMessage));
+                    return -1;
+                }
+            } else {
+                // migrate to schema
+                database.execute(dbMigration);
+                migratedScripts++;
+            }
         }
-
-        List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
-        migrations.forEach(database::execute);
+        
+        if (this.checksumValidation) {
+        	LOGGER.info(format("Keyspace %s validation ended successfully", database.getKeyspaceName(), database.getVersion()));
+        }
+        
         LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));
         database.close();
+        return migratedScripts;
     }
-
-    private boolean databaseIsUpToDate() {
-        return database.getVersion() >= repository.getLatestVersion();
+    
+    private int getRequestedVersion() {
+        return this.checksumValidation ? 0 : database.getVersion();
     }
 }

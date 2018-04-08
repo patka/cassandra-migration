@@ -3,6 +3,7 @@ package org.cognitor.cassandra.migration;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
+import org.cognitor.cassandra.migration.util.ChecksumUtil;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,13 +32,13 @@ public class Database implements Closeable {
      * Insert statement that logs a migration into the schema_migration table.
      */
     private static final String INSERT_MIGRATION = "insert into %s"
-            + "(applied_successful, version, script_name, script, executed_at) values(?, ?, ?, ?, ?)";
+            + "(applied_successful, version, script_name, script, checksum, executed_at) values(?, ?, ?, ?, ?, ?)";
 
     /**
      * Statement used to create the table that manages the migrations.
      */
     private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
-            + " (applied_successful boolean, version int, script_name varchar, script text,"
+            + " (applied_successful boolean, version int, script_name varchar, script text, checksum int,"
             + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
 
     /**
@@ -47,6 +48,12 @@ public class Database implements Closeable {
             "select version from %s where applied_successful = True "
                     + "order by version desc limit 1";
 
+    /**
+     * The query that retrieves checksum for a given script version
+     */
+    private static final String CHECKSUM_QUERY = 
+            "select checksum from %s where applied_successful = True and version = %d";
+    
     /**
      * Error message that is thrown if there is an error during the migration
      */
@@ -109,6 +116,15 @@ public class Database implements Closeable {
         return result.getInt(0);
     }
 
+    public Integer getScriptChecksum(int scriptVersion) {
+        ResultSet resultSet = session.execute(format(CHECKSUM_QUERY, SCHEMA_CF, scriptVersion));
+        Row result = resultSet.one();
+        if (result == null) {
+            return null;
+        }
+        return result.getInt(0);
+    }
+    
     /**
      * Returns the name of the keyspace managed by this instance.
      *
@@ -135,6 +151,29 @@ public class Database implements Closeable {
         session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
     }
 
+    /**
+     * Calculate script checksum and compare it to committed checksum
+     * @param migration
+     */
+    public String validateChecksum(DbMigration migration) {
+        notNull(migration, "migration");
+        LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
+        
+        Integer submittedChecksum = getScriptChecksum(migration.getVersion());
+        //check if the migration version exist
+        if (submittedChecksum == null) {
+        	return String.format("Script version %d not found", migration.getVersion());
+        }
+        
+        int currentChecksum= ChecksumUtil.calculateCRC32(migration.getMigrationScript());
+        if (!submittedChecksum.equals(currentChecksum)) {
+        	return String.format("Checksum validation error: %d vs %d", submittedChecksum, currentChecksum);
+        }
+        
+        //validation succeeded
+        return null;
+    }
+    
     /**
      * Executes the given migration to the database and logs the migration along with the output in the migration table.
      * In case of an error a {@link MigrationException} is thrown with the cause of the error inside.
@@ -180,7 +219,7 @@ public class Database implements Closeable {
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
-                migration.getScriptName(), migration.getMigrationScript(), new Date());
+                migration.getScriptName(), migration.getMigrationScript(), migration.getChecksum(), new Date());
         session.execute(boundStatement);
     }
 }
