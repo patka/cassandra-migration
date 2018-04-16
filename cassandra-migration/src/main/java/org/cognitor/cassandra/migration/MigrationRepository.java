@@ -5,7 +5,6 @@ import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
 import org.cognitor.cassandra.migration.scanner.LocationScanner;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
-import org.cognitor.cassandra.migration.util.ChecksumUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -227,8 +226,7 @@ public class MigrationRepository {
         List<DbMigration> dbMigrations = new ArrayList<>();
         migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
         	String content = loadScriptContent(script);
-            int checksum= ChecksumUtil.calculateCRC32(content);
-            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content, checksum));
+            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
         });
         return dbMigrations;
     }

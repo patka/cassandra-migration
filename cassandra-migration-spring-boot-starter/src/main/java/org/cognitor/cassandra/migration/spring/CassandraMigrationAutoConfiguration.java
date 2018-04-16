@@ -1,9 +1,8 @@
 package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.driver.core.Cluster;
-import org.cognitor.cassandra.migration.Database;
+import org.cognitor.cassandra.migration.MigrationProcess;
 import org.cognitor.cassandra.migration.MigrationRepository;
-import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
@@ -36,17 +35,17 @@ public class CassandraMigrationAutoConfiguration {
 
     @Bean(initMethod = "migrate")
     @ConditionalOnBean(Cluster.class)
-    @ConditionalOnMissingBean(MigrationTask.class)
-    public MigrationTask migrationTask(Cluster cluster) {
+    @ConditionalOnMissingBean(MigrationProcess.class)
+    public MigrationProcess migrationProcess(Cluster cluster) {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
 
-        MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cluster,
-                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())),
-                migrationRepository);
+        return new MigrationProcess(
+                cluster,
+                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName()),
+                createRepository());
     }
 
     private MigrationRepository createRepository() {

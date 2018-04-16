@@ -14,9 +14,12 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
  * @author Patrick Kranz
  */
 public class Configuration {
+    public static final String DEFAULT_MIGRATION_LOCATION = "/cassandra/migration";
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
     private final KeyspaceDefinition keyspaceDefinition;
     private boolean createKeyspace = false;
+    private boolean validateExistingScripts = true;
+    private String migrationLocation = DEFAULT_MIGRATION_LOCATION;
 
     /**
      * Creates a new <code>Configuration</code> instance.
@@ -90,5 +93,23 @@ public class Configuration {
 
     public String getKeyspaceName() {
         return this.keyspaceDefinition.getKeyspaceName();
+    }
+
+    public boolean isValidateExistingScripts() {
+        return validateExistingScripts;
+    }
+
+    public Configuration setValidateExistingScripts(boolean validateExistingScripts) {
+        this.validateExistingScripts = validateExistingScripts;
+        return this;
+    }
+
+    public String getMigrationLocation() {
+        return migrationLocation;
+    }
+
+    public Configuration setMigrationLocation(String migrationLocation) {
+        this.migrationLocation = notNullOrEmpty(migrationLocation, "migrationLocation");
+        return this;
     }
 }

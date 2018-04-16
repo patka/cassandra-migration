@@ -3,15 +3,17 @@ package org.cognitor.cassandra.migration;
 import com.datastax.driver.core.*;
 import com.datastax.driver.core.exceptions.DriverException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
-import org.cognitor.cassandra.migration.util.ChecksumUtil;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import static java.lang.String.format;
+import static java.util.Comparator.comparingInt;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 
 /**
@@ -29,6 +31,11 @@ public class Database implements Closeable {
     private static final String SCHEMA_CF = "schema_migration";
 
     /**
+     * The name of the column that contains the checksum
+     */
+    private static final String CHECKSUM_COLUMN_NAME = "checksum";
+
+    /**
      * Insert statement that logs a migration into the schema_migration table.
      */
     private static final String INSERT_MIGRATION = "insert into %s"
@@ -38,8 +45,13 @@ public class Database implements Closeable {
      * Statement used to create the table that manages the migrations.
      */
     private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
-            + " (applied_successful boolean, version int, script_name varchar, script text, checksum int,"
-            + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
+            + " (applied_successful boolean, version int, script_name varchar, script text, "
+            + CHECKSUM_COLUMN_NAME + " bigint, executed_at timestamp, PRIMARY KEY (applied_successful, version))";
+
+    private static final String ADD_COLUMN = "ALTER TABLE %s "
+            + "ADD %s %s";
+
+    private static final String LOAD_MIGRATIONS_QUERY = "SELECT * FROM " + SCHEMA_CF + " WHERE applied_successful = true";
 
     /**
      * The query that retrieves current schema version
@@ -48,12 +60,6 @@ public class Database implements Closeable {
             "select version from %s where applied_successful = True "
                     + "order by version desc limit 1";
 
-    /**
-     * The query that retrieves checksum for a given script version
-     */
-    private static final String CHECKSUM_QUERY = 
-            "select checksum from %s where applied_successful = True and version = %d";
-    
     /**
      * Error message that is thrown if there is an error during the migration
      */
@@ -116,15 +122,6 @@ public class Database implements Closeable {
         return result.getInt(0);
     }
 
-    public Integer getScriptChecksum(int scriptVersion) {
-        ResultSet resultSet = session.execute(format(CHECKSUM_QUERY, SCHEMA_CF, scriptVersion));
-        Row result = resultSet.one();
-        if (result == null) {
-            return null;
-        }
-        return result.getInt(0);
-    }
-    
     /**
      * Returns the name of the keyspace managed by this instance.
      *
@@ -140,7 +137,21 @@ public class Database implements Closeable {
     private void ensureSchemaTable() {
         if (schemaTablesIsNotExisting()) {
             createSchemaTable();
+        } else if (schemaTableHasNoChecksumColumn()) {
+            addChecksumColumnToMigrationTable();
         }
+    }
+
+    private void addChecksumColumnToMigrationTable() {
+        LOGGER.info("Adding checksum column to schema migration column family.");
+        session.execute(format(ADD_COLUMN, SCHEMA_CF, CHECKSUM_COLUMN_NAME, "bigint"));
+    }
+
+    private boolean schemaTableHasNoChecksumColumn() {
+        return cluster.getMetadata()
+                .getKeyspace(getKeyspaceName())
+                .getTable(SCHEMA_CF)
+                .getColumn(CHECKSUM_COLUMN_NAME) == null;
     }
 
     private boolean schemaTablesIsNotExisting() {
@@ -151,29 +162,55 @@ public class Database implements Closeable {
         session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
     }
 
+//    /**
+//     * Calculate script checksum and compare it to committed checksum
+//     *
+//     * @param migration
+//     */
+//    public String validateChecksum(DbMigration migration) {
+//        notNull(migration, "migration");
+//        LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
+//
+//        Integer submittedChecksum = getScriptChecksum(migration.getVersion());
+//        //check if the migration version exist
+//        if (submittedChecksum == null) {
+//            return String.format("Script version %d not found", migration.getVersion());
+//        }
+//
+//        int currentChecksum = ChecksumUtil.calculateCRC32(migration.getMigrationScript());
+//        if (!submittedChecksum.equals(currentChecksum)) {
+//            return String.format("Checksum validation error: %d vs %d", submittedChecksum, currentChecksum);
+//        }
+//
+//        //validation succeeded
+//        return null;
+//    }
+
     /**
-     * Calculate script checksum and compare it to committed checksum
-     * @param migration
+     * Loads all migrations that have been <b>successfully</b> applied to the
+     * database. The list is sorted by version in an ascending way. If no
+     * migrations are found an empty list is returned.
+     *
+     * @return an ascending sorted list containing all successful migrations or
+     *          an empty list if there are no migrations.
      */
-    public String validateChecksum(DbMigration migration) {
-        notNull(migration, "migration");
-        LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
-        
-        Integer submittedChecksum = getScriptChecksum(migration.getVersion());
-        //check if the migration version exist
-        if (submittedChecksum == null) {
-        	return String.format("Script version %d not found", migration.getVersion());
-        }
-        
-        int currentChecksum= ChecksumUtil.calculateCRC32(migration.getMigrationScript());
-        if (!submittedChecksum.equals(currentChecksum)) {
-        	return String.format("Checksum validation error: %d vs %d", submittedChecksum, currentChecksum);
-        }
-        
-        //validation succeeded
-        return null;
+    public List<DbMigration> loadMigrations() {
+        final List<DbMigration> migrations = new ArrayList<>();
+        ResultSet resultSet = session.execute(LOAD_MIGRATIONS_QUERY);
+        resultSet.forEach(row -> migrations.add(mapRowToMigration(row)));
+        migrations.sort(comparingInt(DbMigration::getVersion));
+        return migrations;
     }
-    
+
+    private DbMigration mapRowToMigration(Row row) {
+        int version = row.getInt("version");
+        String name = row.getString("script_name");
+        String script = row.getString("script");
+        Date executed_at = row.getTimestamp("executed_at");
+        long checksum = row.getColumnDefinitions().contains("checksum") ? row.getLong("checksum") : 0L;
+        return new DbMigration(name, version, script, checksum, executed_at);
+    }
+
     /**
      * Executes the given migration to the database and logs the migration along with the output in the migration table.
      * In case of an error a {@link MigrationException} is thrown with the cause of the error inside.

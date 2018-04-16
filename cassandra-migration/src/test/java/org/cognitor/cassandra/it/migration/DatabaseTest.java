@@ -3,7 +3,9 @@ package org.cognitor.cassandra.it.migration;
 import com.datastax.driver.core.*;
 import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Configuration;
-import org.cognitor.cassandra.migration.*;
+import org.cognitor.cassandra.migration.Database;
+import org.cognitor.cassandra.migration.MigrationException;
+import org.cognitor.cassandra.migration.MigrationProcess;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.junit.Before;
@@ -39,8 +41,8 @@ public class DatabaseTest {
 
     @Test
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndEmptyDatabaseGiven() {
-        MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
-        migrationTask.migrate();
+        MigrationProcess migration = new MigrationProcess(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful"));
+        migration.migrate();
         // after migration the database object is closed
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(3)));
@@ -66,18 +68,22 @@ public class DatabaseTest {
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
-        MigrationRepository repository = new MigrationRepository("migrationtest");
-        new MigrationTask(database, repository).migrate();
+        MigrationProcess migration = new MigrationProcess(
+                cassandra.getCluster(),
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("migrationtest"));
+        migration.migrate();
 
         assertThat(database.getVersion(), is(equalTo(0)));
     }
 
     @Test
     public void shouldThrowExceptionAndLogFailedMigrationWhenWrongMigrationScriptGiven() {
-        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/failing/brokenstatement");
+        MigrationProcess migration = new MigrationProcess(
+                cassandra.getCluster(),
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/failing/brokenstatement"));
         MigrationException exception = null;
         try {
-            new MigrationTask(database, repository).migrate();
+            migration.migrate();
         } catch (MigrationException e) {
             exception = e;
         }
@@ -122,8 +128,10 @@ public class DatabaseTest {
 
     @Test
     public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
-        MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/function"));
-        migrationTask.migrate();
+        MigrationProcess migration = new MigrationProcess(
+                cassandra.getCluster(),
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/function"));
+        migration.migrate();
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(1)));
         assertThat(cassandra.getCluster().getMetadata()
