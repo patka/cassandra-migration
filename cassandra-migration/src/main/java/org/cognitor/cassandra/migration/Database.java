@@ -1,7 +1,6 @@
 package org.cognitor.cassandra.migration;
 
 import com.datastax.driver.core.*;
-import com.datastax.driver.core.exceptions.DriverException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.slf4j.Logger;
@@ -75,27 +74,9 @@ public class Database implements Closeable {
         this.cluster = notNull(cluster, "cluster");
         this.configuration = notNull(configuration, "configuration");
         this.keyspace = configuration.getKeyspaceDefinition();
-        if (configuration.isCreateKeyspace()) {
-            createKeyspaceIfRequired();
-        }
         session = cluster.connect(keyspace.getKeyspaceName());
         ensureSchemaTable();
         this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
-    }
-
-    private void createKeyspaceIfRequired() {
-        if (keyspaceExists()) {
-            return;
-        }
-        try (Session session = this.cluster.connect()) {
-            session.execute(this.keyspace.getCqlStatement());
-        } catch (DriverException exception) {
-            throw new MigrationException(format("Unable to create keyspace %s.", keyspace.getKeyspaceName()), exception);
-        }
-    }
-
-    private boolean keyspaceExists() {
-        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
     }
 
     /**

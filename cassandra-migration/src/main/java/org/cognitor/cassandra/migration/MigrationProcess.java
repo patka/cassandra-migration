@@ -1,6 +1,7 @@
 package org.cognitor.cassandra.migration;
 
 import com.datastax.driver.core.Cluster;
+import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
 import org.cognitor.cassandra.migration.tasks.MigrationTask;
 import org.cognitor.cassandra.migration.tasks.TaskChain;
 
@@ -27,6 +28,9 @@ public class MigrationProcess {
     public void migrate() {
         Database database = new Database(cluster, configuration);
         TaskChain chain = new TaskChain();
+        if (configuration.isCreateKeyspace()) {
+            chain.addTask(new KeyspaceCreationTask(cluster, configuration.getKeyspaceDefinition()));
+        }
         chain.addTask(new MigrationTask(database, migrationRepository));
         chain.execute();
     }

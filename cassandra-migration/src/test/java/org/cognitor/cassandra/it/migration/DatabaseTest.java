@@ -8,6 +8,7 @@ import org.cognitor.cassandra.migration.MigrationException;
 import org.cognitor.cassandra.migration.MigrationProcess;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
+import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -102,14 +103,14 @@ public class DatabaseTest {
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndKeyspaceDefinitionGiven() {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("new_keyspace"), is(nullValue()));
         KeyspaceDefinition keyspace = new KeyspaceDefinition("new_keyspace");
-        Database db = new Database(cassandra.getCluster(), new Configuration(keyspace).setCreateKeyspace(true));
+        KeyspaceCreationTask task = new KeyspaceCreationTask(cassandra.getCluster(), keyspace);
+        task.execute();
 
         KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("new_keyspace");
         assertThat(keyspaceMetadata, is(notNullValue()));
         assertThat(keyspaceMetadata.getReplication().get("class"),
                 is(equalTo("org.apache.cassandra.locator.SimpleStrategy")));
         assertThat(keyspaceMetadata.getReplication().get("replication_factor"), is(equalTo("1")));
-        assertThat(db.getVersion(), is(equalTo(0)));
     }
 
     @Test
@@ -117,7 +118,8 @@ public class DatabaseTest {
         assertThat(cassandra.getCluster().getMetadata().getKeyspace("network_keyspace"), is(nullValue()));
         KeyspaceDefinition keyspace = new KeyspaceDefinition("network_keyspace")
                 .with(new NetworkStrategy().with("dc1", 1));
-        Database db = new Database(cassandra.getCluster(), new Configuration(keyspace).setCreateKeyspace(true));
+        KeyspaceCreationTask task = new KeyspaceCreationTask(cassandra.getCluster(), keyspace);
+        task.execute();
 
         KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("network_keyspace");
         assertThat(keyspaceMetadata, is(notNullValue()));

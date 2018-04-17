@@ -3,6 +3,7 @@ package org.cognitor.cassandra.migration.tasks;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Collections.unmodifiableList;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 
 /**
@@ -42,5 +43,20 @@ public class TaskChain implements Task {
     public TaskChain removeTask(Task task) {
         tasks.remove(notNull(task, "task"));
         return this;
+    }
+
+    /**
+     * Removes all tasks of the given type from the chain.
+     *
+     * @param clazz the type of task that is supposed to be removed. Must not be null.
+     * @return the current <code>TaskChain</code> instance
+     */
+    public TaskChain removeTask(Class<? extends Task> clazz) {
+        tasks.removeIf(t -> t.getClass().isAssignableFrom(notNull(clazz, "clazz")));
+        return this;
+    }
+
+    public List<Task> getTasks() {
+        return unmodifiableList(tasks);
     }
 }
