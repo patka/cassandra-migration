@@ -1,6 +1,7 @@
 package org.cognitor.cassandra.migration;
 
 import com.datastax.driver.core.Cluster;
+import org.cognitor.cassandra.migration.tasks.ChecksumValidationTask;
 import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
 import org.cognitor.cassandra.migration.tasks.MigrationTask;
 import org.cognitor.cassandra.migration.tasks.TaskChain;
@@ -30,6 +31,9 @@ public class MigrationProcess {
         TaskChain chain = new TaskChain();
         if (configuration.isCreateKeyspace()) {
             chain.addTask(new KeyspaceCreationTask(cluster, configuration.getKeyspaceDefinition()));
+        }
+        if (configuration.isChecksumValidation()) {
+            chain.addTask(new ChecksumValidationTask(database, migrationRepository));
         }
         chain.addTask(new MigrationTask(database, migrationRepository));
         chain.execute();

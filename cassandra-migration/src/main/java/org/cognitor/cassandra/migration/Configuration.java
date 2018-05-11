@@ -18,7 +18,7 @@ public class Configuration {
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
     private final KeyspaceDefinition keyspaceDefinition;
     private boolean createKeyspace = false;
-    private boolean validateExistingScripts = true;
+    private boolean checksumValidation = true;
     private String migrationLocation = DEFAULT_MIGRATION_LOCATION;
 
     /**
@@ -95,12 +95,21 @@ public class Configuration {
         return this.keyspaceDefinition.getKeyspaceName();
     }
 
-    public boolean isValidateExistingScripts() {
-        return validateExistingScripts;
+    public boolean isChecksumValidation() {
+        return checksumValidation;
     }
 
-    public Configuration setValidateExistingScripts(boolean validateExistingScripts) {
-        this.validateExistingScripts = validateExistingScripts;
+    /**
+     * Set this to true in order to have the checksum of all existing
+     * scripts recalculated. Use this if you want to make sure no script
+     * inside the application has been changed after it was applied.
+     * <b>Be aware, that this includes changes done to comments.</b>
+     *
+     * @param checksumValidation true if ckecksums should be validated
+     * @return this configuration instance
+     */
+    public Configuration setChecksumValidation(boolean checksumValidation) {
+        this.checksumValidation = checksumValidation;
         return this;
     }
 

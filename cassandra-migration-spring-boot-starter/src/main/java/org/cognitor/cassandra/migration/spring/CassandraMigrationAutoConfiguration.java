@@ -44,7 +44,8 @@ public class CassandraMigrationAutoConfiguration {
 
         return new MigrationProcess(
                 cluster,
-                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName()),
+                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())
+                        .setChecksumValidation(properties.isChecksumValidation()),
                 createRepository());
     }
 

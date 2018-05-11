@@ -143,30 +143,6 @@ public class Database implements Closeable {
         session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
     }
 
-//    /**
-//     * Calculate script checksum and compare it to committed checksum
-//     *
-//     * @param migration
-//     */
-//    public String validateChecksum(DbMigration migration) {
-//        notNull(migration, "migration");
-//        LOGGER.debug(format("About to validate migration %s checksum", migration.getScriptName()));
-//
-//        Integer submittedChecksum = getScriptChecksum(migration.getVersion());
-//        //check if the migration version exist
-//        if (submittedChecksum == null) {
-//            return String.format("Script version %d not found", migration.getVersion());
-//        }
-//
-//        int currentChecksum = ChecksumUtil.calculateCRC32(migration.getMigrationScript());
-//        if (!submittedChecksum.equals(currentChecksum)) {
-//            return String.format("Checksum validation error: %d vs %d", submittedChecksum, currentChecksum);
-//        }
-//
-//        //validation succeeded
-//        return null;
-//    }
-
     /**
      * Loads all migrations that have been <b>successfully</b> applied to the
      * database. The list is sorted by version in an ascending way. If no

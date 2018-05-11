@@ -15,6 +15,7 @@ public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
+    private boolean checksumValidation = true;
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -78,5 +79,21 @@ public class CassandraMigrationConfigurationProperties {
      */
     public boolean hasKeyspaceName() {
         return this.keyspaceName != null && !this.keyspaceName.isEmpty();
+    }
+
+    /**
+     * @return true if the existing checksums should be validated.
+     */
+    public boolean isChecksumValidation() {
+        return checksumValidation;
+    }
+
+    /**
+     * Sets if the checksum of existing scripts should be checked before any migration.
+     *
+     * @param checksumValidation true if checksums should be validated (default)
+     */
+    public void setChecksumValidation(boolean checksumValidation) {
+        this.checksumValidation = checksumValidation;
     }
 }
