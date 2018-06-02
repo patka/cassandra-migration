@@ -59,10 +59,96 @@ public class TaskChainTest {
         chain.removeTask(task);
         assertThat(chain.getTasks().size(), is(equalTo(1)));
     }
+
+    @Test
+    public void shouldAddTaskAfterExistingTaskWhenNewTaskGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        TestTask anotherTask = new TestTask();
+        chain.addTask(task).addTask(() -> {});
+        chain.addAfter(TestTask.class, anotherTask);
+        assertThat(chain.getTasks().size(), is(equalTo(3)));
+        assertThat(chain.getTasks().get(0), is(equalTo(task)));
+        assertThat(chain.getTasks().get(1), is(equalTo(anotherTask)));
+    }
+
+    @Test
+    public void shouldAddTaskAtEndWhenNewTaskAndExistingTaskAtEndGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        TestTask anotherTask = new TestTask();
+        chain.addTask(task);
+        chain.addAfter(TestTask.class, anotherTask);
+        assertThat(chain.getTasks().size(), is(equalTo(2)));
+        assertThat(chain.getTasks().get(0), is(equalTo(task)));
+        assertThat(chain.getTasks().get(1), is(equalTo(anotherTask)));
+    }
+
+    @Test
+    public void shouldAddTaskBeforeExistingTaskWhenNewTaskGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        TestTask anotherTask = new TestTask();
+        chain.addTask(task).addTask(() -> {});
+        chain.addBefore(TestTask.class, anotherTask);
+        assertThat(chain.getTasks().size(), is(equalTo(3)));
+        assertThat(chain.getTasks().get(0), is(equalTo(anotherTask)));
+        assertThat(chain.getTasks().get(1), is(equalTo(task)));
+    }
+
+    @Test
+    public void shouldAddTaskAtEndWhenNewTaskAndNoExistingTaskGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        TestTask anotherTask = new TestTask();
+        chain.addTask(task).addTask(() -> {});
+        chain.addAfter(MigrationTask.class, anotherTask);
+        assertThat(chain.getTasks().size(), is(equalTo(3)));
+        assertThat(chain.getTasks().get(0), is(equalTo(task)));
+        assertThat(chain.getTasks().get(2), is(equalTo(anotherTask)));
+    }
+
+    @Test
+    public void shouldReturnTrueWhenTaskInstanceInChainGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        chain.addTask(task);
+        assertThat(chain.contains(task), is(true));
+    }
+
+    @Test
+    public void shouldReturnFalseWhenTaskInstanceNotInChainGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        chain.addTask(task);
+        assertThat(chain.contains(new TestTask()), is(false));
+    }
+
+    @Test
+    public void shouldReturnTrueWhenTaskClassInChainGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        chain.addTask(task);
+        assertThat(chain.contains(TestTask.class), is(true));
+    }
+
+    @Test
+    public void shouldReturnFalseWhenTaskClassNotInChainGiven() {
+        TaskChain chain = new TaskChain();
+        TestTask task = new TestTask();
+        chain.addTask(task);
+        assertThat(chain.contains(AnotherTask.class), is(false));
+    }
 }
 
 class TestTask implements Task {
 
+    @Override
+    public void execute() {
+    }
+}
+
+class AnotherTask implements Task {
     @Override
     public void execute() {
     }
