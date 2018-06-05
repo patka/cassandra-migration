@@ -20,6 +20,7 @@ public class Configuration {
     private boolean createKeyspace = false;
     private boolean checksumValidation = true;
     private String migrationLocation = DEFAULT_MIGRATION_LOCATION;
+    private boolean validateOnly = false;
 
     /**
      * Creates a new <code>Configuration</code> instance.
@@ -111,6 +112,23 @@ public class Configuration {
     public Configuration setChecksumValidation(boolean checksumValidation) {
         this.checksumValidation = checksumValidation;
         return this;
+    }
+
+    /**
+     * Configures that only the checksum of the existing migrations are validated.
+     * No migration to newer versions will be done and no keyspace migration will
+     * happen if this is true. This shoudl purely be used for verification.
+     * Default is false.
+     *
+     * @param validateOnly true if only checksums should be done, false otherwise.
+     */
+    public Configuration setValidateOnly(boolean validateOnly) {
+        this.validateOnly = validateOnly;
+        return this;
+    }
+
+    public boolean isValidateOnly() {
+        return validateOnly;
     }
 
     public String getMigrationLocation() {

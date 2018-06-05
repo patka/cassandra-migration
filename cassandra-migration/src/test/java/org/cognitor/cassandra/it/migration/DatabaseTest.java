@@ -5,10 +5,11 @@ import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Configuration;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
-import org.cognitor.cassandra.migration.MigrationProcess;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
+import org.cognitor.cassandra.migration.tasks.TaskChain;
+import org.cognitor.cassandra.migration.tasks.TaskChainBuilder;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -42,8 +43,8 @@ public class DatabaseTest {
 
     @Test
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndEmptyDatabaseGiven() {
-        MigrationProcess migration = new MigrationProcess(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful"));
-        migration.migrate();
+        TaskChain migration = new TaskChainBuilder(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful")).buildTaskChain();
+        migration.execute();
         // after migration the database object is closed
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(3)));
@@ -59,6 +60,9 @@ public class DatabaseTest {
         assertThat(results.get(1).getString("script_name"), is(equalTo("002_add_events_table.cql")));
         assertThat(results.get(1).getString("script"), is(equalTo("--This is a comment\n" +
                 "//This is also a comment\n" +
+                "/* even\n" +
+                "   more\n" +
+                "   comment */\n" +
                 "CREATE TABLE EVENTS (event_id uuid primary key, event_name varchar);")));
         assertThat(results.get(2).getBool("applied_successful"), is(true));
         assertThat(results.get(2).getTimestamp("executed_at"), is(not(nullValue())));
@@ -69,22 +73,23 @@ public class DatabaseTest {
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
-        MigrationProcess migration = new MigrationProcess(
+        TaskChain taskChain = new TaskChainBuilder(
                 cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("migrationtest"));
-        migration.migrate();
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("migrationtest")).buildTaskChain();
+        taskChain.execute();
 
         assertThat(database.getVersion(), is(equalTo(0)));
     }
 
     @Test
     public void shouldThrowExceptionAndLogFailedMigrationWhenWrongMigrationScriptGiven() {
-        MigrationProcess migration = new MigrationProcess(
+        TaskChain taskChain = new TaskChainBuilder(
                 cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/failing/brokenstatement"));
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/failing/brokenstatement"))
+                .buildTaskChain();
         MigrationException exception = null;
         try {
-            migration.migrate();
+            taskChain.execute();
         } catch (MigrationException e) {
             exception = e;
         }
@@ -130,10 +135,11 @@ public class DatabaseTest {
 
     @Test
     public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
-        MigrationProcess migration = new MigrationProcess(
+        TaskChain taskChain = new TaskChainBuilder(
                 cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/function"));
-        migration.migrate();
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/function"))
+                .buildTaskChain();
+        taskChain.execute();
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(1)));
         assertThat(cassandra.getCluster().getMetadata()

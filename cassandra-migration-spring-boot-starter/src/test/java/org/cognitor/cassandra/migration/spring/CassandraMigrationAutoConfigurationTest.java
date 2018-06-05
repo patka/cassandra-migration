@@ -6,7 +6,7 @@ import com.datastax.driver.core.Session;
 import org.cassandraunit.CQLDataLoader;
 import org.cassandraunit.dataset.cql.ClassPathCQLDataSet;
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
-import org.cognitor.cassandra.migration.MigrationProcess;
+import org.cognitor.cassandra.migration.tasks.TaskChain;
 import org.hamcrest.CoreMatchers;
 import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -35,7 +35,8 @@ public class CassandraMigrationAutoConfigurationTest {
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
         Cluster cluster = context.getBean(Cluster.class);
-        context.getBean(MigrationProcess.class);
+        TaskChain chain = context.getBean(TaskChain.class);
+        chain.execute();
         try(Session session = cluster.connect(TEST_KEYSPACE)) {
             List<Row> rows = session.execute("SELECT * FROM schema_migration").all();
             assertThat(rows.size(), is(equalTo(1)));

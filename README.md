@@ -8,22 +8,43 @@ If you want to use this library with Spring Boot you can also scroll down to the
 of how to use the Spring Boot Starter.
 
 ## Usage
+### Simple case
 Using this library is quite simple. Given that you have a configured instance of the
 cluster object all you need to do is integrate the next lines in your projects startup code:
 
 ```
-Database database = new Database(cluster, "nameOfMyKeyspace");
-MigrationTask migration = new MigrationTask(database, new MigrationRepository());
-migration.migrate();
+TaskChain migrationTaskChain = new TaskChainBuilder(database, new Configuration("myKeyspaceName")).buildTaskChain();
+migrationTaskChain.execute();
 ```
 
 This assumes that all migration scripts can be found on the classpath in a folder '/cassandra/migration'.
-If you put your scripts on a different classpath location you just need to pass the path in the constructor
-like this:
+If you put your scripts on a different classpath location you just need to adapt the configuration object:
 
 ```java
-new MigrationRepository("/my/path/here");
+new Configuration("myKeyspaceName").setMigrationLocation("/my/path/here");
 ```
+
+### Keyspace creation
+If your keyspace does not yet exist you can let the library take care of its creation. You just need to 
+pass correctly configured instance of KeyspaceDefinition to the configuration. Here is an example:
+
+```java
+ReplicationStrategy replicationStrategy = new NetworkStrategy().with("dc1", 2).with("dc2", 3);
+KeyspaceDefinition keyspace = new KeyspaceDefinition("myKeyspace").with(replicationStrategy);
+new Configuration(keyspace).setCreateKeyspace(true);
+```
+
+This would create a keyspace called 'myKeyspace' with a network replication strategy consisting
+of one datacenter with a replication factor of 2 and a second datacenter with a factor of 3.
+
+### Checksum validation
+Cassandra Migration creates a checksum for all scripts that are executed against the database
+and stores it in its schema migration table. By default before every run all existing migration
+checksums are validated by recalculating them based on the scripts to ensure they have not been
+changed after they were applied. This behavior can be changed with two options on the configuration:
+* checksumValidation: if set to false, no validation will be performed
+* validationOnly: if set to true, the library will only perform the validation and will do nothing else.
+Other options that contradict with this will be ignored.
 
 ## Naming
 Scripts should be named in the following schema:
@@ -51,8 +72,8 @@ it is just a matter of which script is found first, this behavior is no longer t
 ## Script content
 The script format is rather simple. It allows one statement per line and lines should be finished
 with a ';' character. Every line that is not empty and is not a single line comment will be executed against the Cassandra instance.
-Single line comments are indicated by either '//' or '--' characters.
-Multi line comments are not supported.
+Single line comments are indicated by either '//' or '--' characters. Multi line comments start with '/\*' and
+end with '\*/'
 
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.
@@ -94,7 +115,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.1.2</version>
+      <version>3.0.0</version>
   </dependency>
 ```
 
@@ -105,7 +126,7 @@ the migration. You have to include the following dependency to make it work:
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-      <version>2.1.2</version>
+      <version>3.0.0</version>
   </dependency>
 ```
 

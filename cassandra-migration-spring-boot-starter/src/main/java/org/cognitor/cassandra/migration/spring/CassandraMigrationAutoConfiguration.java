@@ -1,12 +1,13 @@
 package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.driver.core.Cluster;
-import org.cognitor.cassandra.migration.MigrationProcess;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
+import org.cognitor.cassandra.migration.tasks.TaskChain;
+import org.cognitor.cassandra.migration.tasks.TaskChainBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration;
@@ -33,20 +34,19 @@ public class CassandraMigrationAutoConfiguration {
     }
 
 
-    @Bean(initMethod = "migrate")
+    @Bean
     @ConditionalOnBean(Cluster.class)
-    @ConditionalOnMissingBean(MigrationProcess.class)
-    public MigrationProcess migrationProcess(Cluster cluster) {
+    @ConditionalOnMissingBean(TaskChain.class)
+    public TaskChain migrationProcess(Cluster cluster) {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
-
-        return new MigrationProcess(
-                cluster,
-                new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())
-                        .setChecksumValidation(properties.isChecksumValidation()),
-                createRepository());
+        return new TaskChainBuilder(cluster,
+                    new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())
+                .setChecksumValidation(properties.isChecksumValidation())
+                .setValidateOnly(properties.isChecksumValidationOnly())
+                ).buildTaskChain();
     }
 
     private MigrationRepository createRepository() {

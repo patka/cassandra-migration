@@ -28,14 +28,14 @@ public class MigrationRepositoryTest {
 
     @Test
     public void shouldReturnOneScriptWhenRequestForAllScriptsSinceVersionTwoGiven() {
-        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(2);
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(3);
         assertThat(scripts.size(), is(equalTo(1)));
         assertThat(scripts.get(0).getVersion(), is(equalTo(3)));
     }
 
     @Test
     public void shouldReturnTwoScriptsWhenRequestForAllScriptsSinceVersionOneGiven() {
-        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(2);
         assertThat(scripts.size(), is(equalTo(2)));
         assertThat(scripts.get(0).getVersion(), is(equalTo(2)));
         assertThat(scripts.get(1).getVersion(), is(equalTo(3)));
@@ -70,6 +70,19 @@ public class MigrationRepositoryTest {
     }
 
     @Test
+    public void shouldReturnOneScriptWhenLowerAndUpperVersionGiven() {
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/successful");
+        assertThat(repository.getMigrationsSinceVersion(3, 4).size(), is(equalTo(1)));
+        assertThat(repository.getMigrationsSinceVersion(3, 5).size(), is(equalTo(1)));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldThrowExceptionWhenWrongIndexOrderGiven() {
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/successful");
+        repository.getMigrationsSinceVersion(3,2);
+    }
+
+    @Test
     public void shouldReturnCorrectVersionNumberWhenPathWithLeadingSlashGiven() {
         MigrationRepository repository = new MigrationRepository("/cassandra/migrationtest/empty");
         assertThat(repository.getLatestVersion(), is(equalTo(0)));
@@ -77,7 +90,7 @@ public class MigrationRepositoryTest {
 
     @Test
     public void shouldNotIgnoreComments() {
-        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(1);
+        List<DbMigration> scripts = migrationRepository.getMigrationsSinceVersion(2);
         assertThat(scripts.get(0).getMigrationScript().contains("--"), is(true));
         assertThat(scripts.get(0).getMigrationScript().contains("//"), is(true));
     }

@@ -15,6 +15,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.function.Predicate;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -214,23 +215,46 @@ public class MigrationRepository {
     }
 
     /**
-     * Returns all migrations starting from and excluding the given version. Usually you want to provide the version of
-     * the database here to get all migrations that need to be executed. In case there is no script with a newer
-     * version than the one given, an empty list is returned.
+     * Returns all migrations starting from given version inclusive.. Usually you want to provide the version of
+     * the database plus 1 here to get all migrations that need to be executed. In case there is no script with
+     * a version equal or higher than the one given, an empty list is returned.
      *
-     * @param version the version that is currently in the database
-     * @return all versions since the given version or an empty list if no newer script is available. Never null.
-     *         Does not include the given version.
+     * @param version the minimum version to be returned
+     * @return all versions since the given version inclusive or an empty list if no newer script is available. Never null.
      */
     public List<DbMigration> getMigrationsSinceVersion(int version) {
+        return getMigrationsSinceVersion(version, Integer.MAX_VALUE);
+    }
+
+    /**
+     * Same as <code>getMigrationsSinceVersion(int version)</code> but with the difference that
+     * you can specify an up until version that is excluded. So you can specify to get all version
+     * from 0 to 10 which will return the scripts with version 0 to 9. The method is consistent with
+     * most Java collections in the way that the start index is inclusive while the end version is
+     * excluded.
+     *
+     * @param startVersion the minimum version to be returned.
+     * @param endVersion the first version that should not be returned anymore.
+     * @return a list of DbMigration objects or an empty list in case there is no match.
+     */
+    public List<DbMigration> getMigrationsSinceVersion(int startVersion, int endVersion) {
+        if (startVersion > endVersion) {
+            throw new IllegalArgumentException("endVersion cannot be smaller than startVersion. I think you got the order of arguments wrong :)");
+        }
         List<DbMigration> dbMigrations = new ArrayList<>();
-        migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
-        	String content = loadScriptContent(script);
+        migrationScripts.stream()
+                .filter(isScriptWithinVersionRange(startVersion, endVersion))
+                .forEach(script -> {
+            String content = loadScriptContent(script);
             dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
         });
         return dbMigrations;
     }
-    
+
+    private Predicate<ScriptFile> isScriptWithinVersionRange(int version, int endVersion) {
+        return script -> script.getVersion() >= version && script.getVersion() < endVersion;
+    }
+
     private String loadScriptContent(ScriptFile script) {
         try {
             return readResourceFileAsString(script.getResourceName(), getClass().getClassLoader());

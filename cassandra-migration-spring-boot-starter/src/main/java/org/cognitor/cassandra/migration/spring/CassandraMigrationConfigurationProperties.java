@@ -16,6 +16,7 @@ public class CassandraMigrationConfigurationProperties {
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
     private boolean checksumValidation = true;
+    private boolean checksumValidationOnly = false;
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -95,5 +96,24 @@ public class CassandraMigrationConfigurationProperties {
      */
     public void setChecksumValidation(boolean checksumValidation) {
         this.checksumValidation = checksumValidation;
+    }
+
+    /**
+     * Returns if the checksum should be validated only. In this case nothing else will be done.
+     *
+     * @return true if checksum only validation is enabled, false otherwise.
+     */
+    public boolean isChecksumValidationOnly() {
+        return checksumValidationOnly;
+    }
+
+    /**
+     * Sets if the checksum should be validated only. In this case nothing else will be done.
+     *
+     * @param checksumValidationOnly true if checksum only validation is enabled, false otherwise.
+     */
+    public CassandraMigrationConfigurationProperties setChecksumValidationOnly(boolean checksumValidationOnly) {
+        this.checksumValidationOnly = checksumValidationOnly;
+        return this;
     }
 }
