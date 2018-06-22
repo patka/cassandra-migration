@@ -197,11 +197,18 @@ public class Database implements Closeable {
         }
     }
 
-    private void executeStatement(String statement) {
+    private void executeStatement(String statement) throws DisagreementException {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = new SimpleStatement(statement);
             simpleStatement.setConsistencyLevel(configuration.getConsistencyLevel());
-            session.execute(simpleStatement);
+
+            final ResultSet result = session.execute(simpleStatement);
+
+            // Make sure to interrupt the migration if an agreement cannot be reached.
+            final boolean notInAgreement = !result.getExecutionInfo().isSchemaInAgreement();
+            if(notInAgreement){
+                throw new DisagreementException();
+            }
         }
     }
 
