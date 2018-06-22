@@ -56,7 +56,7 @@ Multi line comments are not supported.
 
 ## Migrations
 Migrations are executed with the Quorum consistency level by default to make sure that always a majority of nodes share the same schema information.
-Any change to the schema triggers a check for schema agreement. Please read the [Datastax driver documentation](https://docs.datastax.com/en/developer/java-driver/2.1/manual/metadata/#schema-agreement) for more information.
+Any change to the schema triggers a check for schema agreement. Please read the [Datastax driver documentation](https://docs.datastax.com/en/developer/java-driver/3.5/manual/metadata/#schema-agreement) for more information.
 Error handling is not really implemented (and as far as I know not really possible from a database point of view).
 If one script fails the migration is stopped and an exception is thrown. The exception contains the name of
 the failing script as well as the broken statement in case the error happened during the execution of a
