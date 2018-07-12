@@ -16,11 +16,15 @@ public class MigrationException extends RuntimeException {
     private final String statement;
 
     public MigrationException(String message) {
-        this(message, null, null);
+        this(message, (String) null);
     }
 
     public MigrationException(String message, String scriptName) {
-        this(message, null, scriptName);
+        this(message, null, scriptName, null);
+    }
+
+    public MigrationException(String message, String scriptName, String statement) {
+        this(message, null, scriptName, statement);
     }
 
     public MigrationException(String message, Throwable cause) {

@@ -59,16 +59,13 @@ public class Database implements Closeable {
             "select version from %s where applied_successful = True "
                     + "order by version desc limit 1";
 
-    /**
-     * Error message that is thrown if there is an error during the migration
-     */
-    private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
-
     private final KeyspaceDefinition keyspace;
     private final Cluster cluster;
     private final Session session;
     private final PreparedStatement logMigrationStatement;
     private final Configuration configuration;
+
+    private StatementResultHandler statementResultHandler = new DefaultStatementResultHandler();
 
     public Database(Cluster cluster, Configuration configuration) {
         this.cluster = notNull(cluster, "cluster");
@@ -149,7 +146,7 @@ public class Database implements Closeable {
      * migrations are found an empty list is returned.
      *
      * @return an ascending sorted list containing all successful migrations or
-     *          an empty list if there are no migrations.
+     * an empty list if there are no migrations.
      */
     public List<DbMigration> loadMigrations() {
         final List<DbMigration> migrations = new ArrayList<>();
@@ -179,36 +176,32 @@ public class Database implements Closeable {
         notNull(migration, "migration");
         LOGGER.debug(format("About to execute migration %s to version %d", migration.getScriptName(),
                 migration.getVersion()));
-        String lastStatement = null;
-        try {
-            SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
-            for (String statement : lexer.getCqlQueries()) {
-                statement = statement.trim();
-                lastStatement = statement;
-                executeStatement(statement);
+        SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
+        for (String statement : lexer.getCqlQueries()) {
+            statement = statement.trim();
+            if (statement.isEmpty()) continue;
+            StatementResult result = executeStatement(statement);
+            if (statementResultHandler.isError(result)) {
+                LOGGER.debug(format("'%s' decided that an error happened for statement '%s'",
+                        statementResultHandler.getClass().getName(), result.getStatement()));
+                logMigration(migration, false);
+                statementResultHandler.handleError(result, migration);
             }
-            logMigration(migration, true);
-            LOGGER.debug(format("Successfully applied migration %s to version %d",
-                    migration.getScriptName(), migration.getVersion()));
-        } catch (Exception exception) {
-            logMigration(migration, false);
-            String errorMessage = format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement);
-            throw new MigrationException(errorMessage, exception, migration.getScriptName(), lastStatement);
         }
+        logMigration(migration, true);
+        LOGGER.debug(format("Successfully applied migration %s to version %d",
+                migration.getScriptName(), migration.getVersion()));
     }
 
-    private void executeStatement(String statement) throws DisagreementException {
-        if (!statement.isEmpty()) {
-            SimpleStatement simpleStatement = new SimpleStatement(statement);
-            simpleStatement.setConsistencyLevel(configuration.getConsistencyLevel());
+    private StatementResult executeStatement(String statement) {
+        SimpleStatement simpleStatement = new SimpleStatement(statement);
+        simpleStatement.setConsistencyLevel(configuration.getConsistencyLevel());
 
+        try {
             final ResultSet result = session.execute(simpleStatement);
-
-            // Make sure to interrupt the migration if an agreement cannot be reached.
-            final boolean notInAgreement = !result.getExecutionInfo().isSchemaInAgreement();
-            if(notInAgreement){
-                throw new DisagreementException();
-            }
+            return StatementResult.success(statement, result.getExecutionInfo().isSchemaInAgreement());
+        } catch (Exception e) {
+            return StatementResult.error(statement, e);
         }
     }
 
@@ -222,5 +215,10 @@ public class Database implements Closeable {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), migration.getChecksum(), new Date());
         session.execute(boundStatement);
+    }
+
+    public Database setStatementResultHandler(StatementResultHandler statementResultHandler) {
+        this.statementResultHandler = notNull(statementResultHandler, "statementResultHandler");
+        return this;
     }
 }
