@@ -1,18 +1,26 @@
 package org.cognitor.cassandra.migration;
 
-import com.datastax.driver.core.*;
-import com.datastax.driver.core.exceptions.DriverException;
+import static java.lang.String.format;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
+import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
+
+import java.io.Closeable;
+import java.util.Date;
+
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Closeable;
-import java.util.Date;
-
-import static java.lang.String.format;
-import static org.cognitor.cassandra.migration.util.Ensure.notNull;
-import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
+import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.PreparedStatement;
+import com.datastax.driver.core.ResultSet;
+import com.datastax.driver.core.Row;
+import com.datastax.driver.core.Session;
+import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.exceptions.DriverException;
 
 /**
  * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
@@ -57,15 +65,10 @@ public class Database implements Closeable {
     private final Keyspace keyspace;
     private final Cluster cluster;
     private final Session session;
-    private ConsistencyLevel consistencyLevel;
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
 
     public Database(Cluster cluster, Keyspace keyspace) {
-        this(cluster, keyspace, ConsistencyLevel.QUORUM);
-
-    }
-
-    public Database(Cluster cluster, Keyspace keyspace, ConsistencyLevel consistencyLevel) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspace = notNull(keyspace, "keyspace");
         this.keyspaceName = keyspace.getKeyspaceName();
@@ -205,5 +208,14 @@ public class Database implements Closeable {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
+    }
+
+    public ConsistencyLevel getConsistencyLevel() {
+        return consistencyLevel;
+    }
+
+    public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
+        return this;
     }
 }
