@@ -214,8 +214,14 @@ public class Database implements Closeable {
         return consistencyLevel;
     }
 
+    /**
+     * Set the consistency level that should be used for schema upgrades. Default is <code>ConsistencyLevel.QUORUM</code>
+     *
+     * @param consistencyLevel the consistency level to be used. Must not be null.
+     * @return the current database instance
+     */
     public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = consistencyLevel;
+        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
         return this;
     }
 }

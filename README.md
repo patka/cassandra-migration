@@ -94,7 +94,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.1.2</version>
+      <version>2.2.0</version>
   </dependency>
 ```
 
@@ -105,11 +105,12 @@ the migration. You have to include the following dependency to make it work:
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-      <version>2.1.2</version>
+      <version>2.2.0</version>
   </dependency>
 ```
 
-In your properties file you will have three new properties that can be set:
+In your properties file you will have four new properties that can be set:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
 * cassandra.migration.script-location Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
+* cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations

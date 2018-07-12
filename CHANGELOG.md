@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### v2.2.0
+* Pull Request 20: Consistency level can now be changed for the schema migration execution
+* Issue 19: Comments that do not start at the beginning of the line are now supported
+
 ### v2.1.2
 * Issue 18: Scripts can be found if run inside a Spring Boot fat jar
 * Issue 16: Scripts can now be placed in subfolders inside the resources folder.
