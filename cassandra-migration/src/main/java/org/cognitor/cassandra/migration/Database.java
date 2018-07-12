@@ -57,13 +57,19 @@ public class Database implements Closeable {
     private final Keyspace keyspace;
     private final Cluster cluster;
     private final Session session;
+    private ConsistencyLevel consistencyLevel;
     private final PreparedStatement logMigrationStatement;
 
-
     public Database(Cluster cluster, Keyspace keyspace) {
+        this(cluster, keyspace, ConsistencyLevel.QUORUM);
+
+    }
+
+    public Database(Cluster cluster, Keyspace keyspace, ConsistencyLevel consistencyLevel) {
         this.cluster = notNull(cluster, "cluster");
         this.keyspace = notNull(keyspace, "keyspace");
         this.keyspaceName = keyspace.getKeyspaceName();
+        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
         createKeyspaceIfRequired();
         session = cluster.connect(keyspaceName);
         ensureSchemaTable();
@@ -179,10 +185,12 @@ public class Database implements Closeable {
         }
     }
 
+
+
     private void executeStatement(String statement) {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = new SimpleStatement(statement);
-            simpleStatement.setConsistencyLevel(ConsistencyLevel.QUORUM);
+            simpleStatement.setConsistencyLevel(this.consistencyLevel);
             session.execute(simpleStatement);
         }
     }
