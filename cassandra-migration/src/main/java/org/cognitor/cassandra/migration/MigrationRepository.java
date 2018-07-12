@@ -64,7 +64,7 @@ public class MigrationRepository {
      * Pattern matching the prefixes that can be put in the beginning of a line to indicate a single line comment.
      * Any line matching this pattern will be ignored.
      */
-    public static final String SINGLE_LINE_COMMENT_PATTERN = "(^--.*)|(^//.*)";
+    public static final String SINGLE_LINE_COMMENT_PATTERN = "(^\\s*--.*)|(^\\s*//.*)";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MigrationRepository.class);
     private static final String EXTRACT_VERSION_ERROR_MSG = "Error for script %s. Unable to extract version.";

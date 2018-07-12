@@ -1,6 +1,5 @@
 package org.cognitor.cassandra.migration.spring;
 
-import com.datastax.driver.core.Cluster;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
@@ -17,6 +16,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import com.datastax.driver.core.Cluster;
 
 /**
  * @author Patrick Kranz
@@ -44,7 +45,8 @@ public class CassandraMigrationAutoConfiguration {
         }
 
         MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cluster, properties.getKeyspaceName()),
+        return new MigrationTask(new Database(cluster, properties.getKeyspaceName())
+                .setConsistencyLevel(properties.getConsistencyLevel()),
                 migrationRepository);
     }
 

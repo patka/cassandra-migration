@@ -3,6 +3,8 @@ package org.cognitor.cassandra.migration.spring;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.datastax.driver.core.ConsistencyLevel;
+
 /**
  * Configuration properties for the cassandra migration library.
  * These values should be set a properties file that is used inside the
@@ -15,6 +17,7 @@ public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -78,5 +81,22 @@ public class CassandraMigrationConfigurationProperties {
      */
     public boolean hasKeyspaceName() {
         return this.keyspaceName != null && !this.keyspaceName.isEmpty();
+    }
+
+    /**
+     * @return the consistency level to be used for schema migrations
+     */
+    public ConsistencyLevel getConsistencyLevel() {
+        return consistencyLevel;
+    }
+
+    /**
+     * Sets the consistency level which should be used to execute the schema migrations.
+     * Default is <code>ConsistencyLevel.QUORUM</code>
+     *
+     * @param consistencyLevel the consistency level to be used for migrations
+     */
+    public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
     }
 }
