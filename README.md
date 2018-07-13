@@ -1,4 +1,4 @@
-# Cassandra Schema Migration for Java [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration)
+# Cassandra Schema Migration for Java (v2.2.0) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration)
 
 ## Purpose
 This library can be used to implement migrations for the Cassandra database schema inside your Java application.
