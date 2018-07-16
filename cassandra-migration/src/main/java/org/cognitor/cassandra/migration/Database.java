@@ -7,12 +7,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import static java.lang.String.format;
 import static java.util.Comparator.comparingInt;
+import static java.util.stream.Collectors.toList;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 
 /**
@@ -149,11 +149,11 @@ public class Database implements Closeable {
      * an empty list if there are no migrations.
      */
     public List<DbMigration> loadMigrations() {
-        final List<DbMigration> migrations = new ArrayList<>();
-        ResultSet resultSet = session.execute(LOAD_MIGRATIONS_QUERY);
-        resultSet.forEach(row -> migrations.add(mapRowToMigration(row)));
-        migrations.sort(comparingInt(DbMigration::getVersion));
-        return migrations;
+        return session.execute(LOAD_MIGRATIONS_QUERY)
+                .all().stream()
+                .map(this::mapRowToMigration)
+                .sorted(comparingInt(DbMigration::getVersion))
+                .collect(toList());
     }
 
     private DbMigration mapRowToMigration(Row row) {
@@ -177,17 +177,20 @@ public class Database implements Closeable {
         LOGGER.debug(format("About to execute migration %s to version %d", migration.getScriptName(),
                 migration.getVersion()));
         SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
-        for (String statement : lexer.getCqlQueries()) {
-            statement = statement.trim();
-            if (statement.isEmpty()) continue;
-            StatementResult result = executeStatement(statement);
-            if (statementResultHandler.isError(result)) {
-                LOGGER.debug(format("'%s' decided that an error happened for statement '%s'",
-                        statementResultHandler.getClass().getName(), result.getStatement()));
-                logMigration(migration, false);
-                statementResultHandler.handleError(result, migration);
-            }
-        }
+        lexer.getCqlQueries().stream()
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .forEach(statement -> {
+                    StatementResult result = executeStatement(statement);
+                    if (statementResultHandler.isError(result)) {
+                        LOGGER.debug(format("'%s' decided that an error happened for statement '%s'",
+                                statementResultHandler.getClass().getName(), result.getStatement()));
+                        logMigration(migration, false);
+                        statementResultHandler.handleError(result, migration);
+                    } else {
+                        statementResultHandler.handleSuccess(result, migration);
+                    }
+                });
         logMigration(migration, true);
         LOGGER.debug(format("Successfully applied migration %s to version %d",
                 migration.getScriptName(), migration.getVersion()));

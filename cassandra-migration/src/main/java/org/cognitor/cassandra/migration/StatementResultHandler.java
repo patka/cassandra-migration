@@ -59,4 +59,14 @@ public interface StatementResultHandler {
      * @param migration the migration script in which context the statement failed
      */
     void handleError(StatementResult result, DbMigration migration);
+
+    /**
+     * Will be called if <code>isError</code> returns falls. You can use this to
+     * perform additional custom tasks or do some custom logging. The default
+     * implementation should do nothing here.
+     *
+     * @param result    the result of the previous statement execution
+     * @param migration the migration script in which context the statement happened
+     */
+    void handleSuccess(StatementResult result, DbMigration migration);
 }

@@ -1,11 +1,16 @@
 package org.cognitor.cassandra.migration;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import static java.lang.String.format;
 
 /**
  * @author Patrick Kranz
  */
 public class DefaultStatementResultHandler implements StatementResultHandler {
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultStatementResultHandler.class);
+
     /**
      * Error message that is thrown if there is an error during the migration
      */
@@ -26,6 +31,9 @@ public class DefaultStatementResultHandler implements StatementResultHandler {
 
     @Override
     public void handleError(StatementResult result, DbMigration migration) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Handling error for statement '%s'", result.getStatement());
+        }
         if (!result.isAgreementReached()) {
             String errorMessage = format(NO_AGREEMENT_REACHED_MSG,
                     migration.getScriptName(), result.getStatement());
@@ -38,5 +46,12 @@ public class DefaultStatementResultHandler implements StatementResultHandler {
         }
 
         throw new MigrationException(format(UNKNOWN_ERROR_MSG, result.getStatement(), migration.getScriptName()));
+    }
+
+    @Override
+    public void handleSuccess(StatementResult result, DbMigration migration) {
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Successfully executed statement '%s'", result.getStatement());
+        }
     }
 }
