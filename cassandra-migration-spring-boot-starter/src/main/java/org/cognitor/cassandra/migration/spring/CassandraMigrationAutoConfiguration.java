@@ -46,7 +46,11 @@ public class CassandraMigrationAutoConfiguration {
                     new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())
                 .setChecksumValidation(properties.isChecksumValidation())
                 .setValidateOnly(properties.isChecksumValidationOnly())
-                ).buildTaskChain();
+                .setRecalculateChecksum(properties.isRecalculateChecksum())
+                .setRecalculateChecksumOnly(properties.isRecalculateChecksumOnly())
+                .setConsistencyLevel(properties.getConsistencyLevel()),
+                createRepository())
+                .buildTaskChain();
     }
 
     private MigrationRepository createRepository() {

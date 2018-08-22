@@ -1,5 +1,6 @@
 package org.cognitor.cassandra.migration.spring;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -17,6 +18,9 @@ public class CassandraMigrationConfigurationProperties {
     private String keyspaceName;
     private boolean checksumValidation = true;
     private boolean checksumValidationOnly = false;
+    private boolean recalculateChecksumOnly = false;
+    private boolean recalculateChecksum = false;
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -114,6 +118,51 @@ public class CassandraMigrationConfigurationProperties {
      */
     public CassandraMigrationConfigurationProperties setChecksumValidationOnly(boolean checksumValidationOnly) {
         this.checksumValidationOnly = checksumValidationOnly;
+        return this;
+    }
+
+    /**
+     * Indicates wheter this is a checksum recalculation run or not. Default is false.
+     * @return true if checksums should be updated, false otherwise.
+     */
+    public boolean isRecalculateChecksumOnly() {
+        return recalculateChecksumOnly;
+    }
+
+    /**
+     * Sets if the current execution should only recalculate the checksums. Default is false.
+     * <b>If this is true, no other task will be executed.</b>
+     *
+     * @param recalculateChecksumOnly true if checksums should be updated. False otherwise.
+     * @return this configuration instance
+     */
+    public CassandraMigrationConfigurationProperties setRecalculateChecksumOnly(boolean recalculateChecksumOnly) {
+        this.recalculateChecksumOnly = recalculateChecksumOnly;
+        return this;
+    }
+
+    public boolean isRecalculateChecksum() {
+        return recalculateChecksum;
+    }
+
+    /**
+     * Set this to true if you want the checksum to be updated during startup. After the update
+     * the normal migration process will be done.
+     *
+     * @param recalculateChecksum true if checksums should be updated.
+     * @return this configuration instance
+     */
+    public CassandraMigrationConfigurationProperties setRecalculateChecksum(boolean recalculateChecksum) {
+        this.recalculateChecksum = recalculateChecksum;
+        return this;
+    }
+
+    public ConsistencyLevel getConsistencyLevel() {
+        return consistencyLevel;
+    }
+
+    public CassandraMigrationConfigurationProperties setConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = consistencyLevel;
         return this;
     }
 }

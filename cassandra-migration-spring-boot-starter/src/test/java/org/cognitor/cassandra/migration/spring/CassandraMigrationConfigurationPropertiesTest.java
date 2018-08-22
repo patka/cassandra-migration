@@ -1,5 +1,6 @@
 package org.cognitor.cassandra.migration.spring;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -20,6 +21,11 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.script-location:cassandra/migrationpath");
         addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
         addEnvironment(context, "cassandra.migration.strategy:IGNORE_DUPLICATES");
+        addEnvironment(context, "cassandra.migration.consistency-level:ALL");
+        addEnvironment(context, "cassandra.migration.recalculateChecksum:true");
+        addEnvironment(context, "cassandra.migration.recalculateChecksumOnly:true");
+        addEnvironment(context, "cassandra.migration.checksumValidation:true");
+        addEnvironment(context, "cassandra.migration.checksumValidationOnly:true");
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
@@ -27,6 +33,11 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getKeyspaceName(), is(equalTo("test_keyspace")));
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
+        assertThat(properties.getConsistencyLevel(), is(equalTo(ConsistencyLevel.ALL)));
+        assertThat(properties.isChecksumValidation(), is(true));
+        assertThat(properties.isChecksumValidationOnly(), is(true));
+        assertThat(properties.isRecalculateChecksum(), is(true));
+        assertThat(properties.isRecalculateChecksumOnly(), is(true));
     }
 
     @Test

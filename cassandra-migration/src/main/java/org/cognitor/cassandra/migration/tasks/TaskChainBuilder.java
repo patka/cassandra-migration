@@ -33,6 +33,10 @@ public class TaskChainBuilder {
     public TaskChain buildTaskChain() {
         Database database = new Database(cluster, configuration);
         TaskChain chain = new TaskChain();
+        if (configuration.isRecalculateChecksumOnly()) {
+            return chain.addTask(new RecalculateChecksumTask(database, migrationRepository));
+        }
+
         if (configuration.isValidateOnly()) {
             return chain.addTask(new ChecksumValidationTask(database, migrationRepository));
         }
@@ -40,7 +44,10 @@ public class TaskChainBuilder {
         if (configuration.isCreateKeyspace()) {
             chain.addTask(new KeyspaceCreationTask(cluster, configuration.getKeyspaceDefinition()));
         }
-        if (configuration.isChecksumValidation()) {
+        if (configuration.isRecalculateChecksum()) {
+            chain.addTask(new RecalculateChecksumTask(database, migrationRepository));
+        }
+        if (configuration.isChecksumValidation() && !configuration.isRecalculateChecksum()) {
             chain.addTask(new ChecksumValidationTask(database, migrationRepository));
         }
         return chain.addTask(new MigrationTask(database, migrationRepository));

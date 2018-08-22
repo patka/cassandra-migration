@@ -21,6 +21,8 @@ public class Configuration {
     private boolean checksumValidation = true;
     private String migrationLocation = DEFAULT_MIGRATION_LOCATION;
     private boolean validateOnly = false;
+    private boolean recalculateChecksumOnly = false;
+    private boolean recalculateChecksum = false;
 
     /**
      * Creates a new <code>Configuration</code> instance.
@@ -117,7 +119,7 @@ public class Configuration {
     /**
      * Configures that only the checksum of the existing migrations are validated.
      * No migration to newer versions will be done and no keyspace migration will
-     * happen if this is true. This shoudl purely be used for verification.
+     * happen if this is true. This should purely be used for verification.
      * Default is false.
      *
      * @param validateOnly true if only checksums should be done, false otherwise.
@@ -137,6 +139,35 @@ public class Configuration {
 
     public Configuration setMigrationLocation(String migrationLocation) {
         this.migrationLocation = notNullOrEmpty(migrationLocation, "migrationLocation");
+        return this;
+    }
+
+    /**
+     * Indicates wheter this is a checksum recalculation run or not. Default is false.
+     * @return true if checksums should be updated, false otherwise.
+     */
+    public boolean isRecalculateChecksumOnly() {
+        return recalculateChecksumOnly;
+    }
+
+    /**
+     * Sets if the current execution should only recalculate the checksums. Default is false.
+     * <b>If this is true, no other task will be executed.</b>
+     *
+     * @param recalculateChecksumOnly true if checksums should be updated. False otherwise.
+     * @return this configuration instance
+     */
+    public Configuration setRecalculateChecksumOnly(boolean recalculateChecksumOnly) {
+        this.recalculateChecksumOnly = recalculateChecksumOnly;
+        return this;
+    }
+
+    public boolean isRecalculateChecksum() {
+        return recalculateChecksum;
+    }
+
+    public Configuration setRecalculateChecksum(boolean recalculateChecksum) {
+        this.recalculateChecksum = recalculateChecksum;
         return this;
     }
 }

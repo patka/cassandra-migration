@@ -36,7 +36,7 @@ public class ChecksumValidationTask implements Task {
     private final MigrationRepository repository;
 
     /**
-     * Creates a migration task that uses the given database, repository and validation flag.
+     * Creates a migration task that uses the given database, repository.
      *
      * @param database   the database that should be migrated
      * @param repository the repository that contains the migration scripts

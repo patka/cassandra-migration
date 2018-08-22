@@ -52,6 +52,9 @@ public class Database implements Closeable {
 
     private static final String LOAD_MIGRATIONS_QUERY = "SELECT * FROM " + SCHEMA_CF + " WHERE applied_successful = true";
 
+    private static final String UPDATE_MIGRATION_QUERY = "UPDATE %s SET script_name=?, script=?, %s=? "
+            + "WHERE applied_successful = true AND version = %d";
+
     /**
      * The query that retrieves current schema version
      */
@@ -64,6 +67,8 @@ public class Database implements Closeable {
     private final Session session;
     private final PreparedStatement logMigrationStatement;
     private final Configuration configuration;
+
+    private PreparedStatement updateMigrationStatement;
 
     private StatementResultHandler statementResultHandler = new DefaultStatementResultHandler();
 
@@ -154,6 +159,35 @@ public class Database implements Closeable {
                 .map(this::mapRowToMigration)
                 .sorted(comparingInt(DbMigration::getVersion))
                 .collect(toList());
+    }
+
+    /**
+     * This method can be used to update the existing migrations. Only the script name,
+     * the script content and the
+     * @param migration
+     */
+    public void updateMigration(DbMigration migration) {
+        if (migration.getVersion() > getVersion()) {
+            throw new IllegalArgumentException("Given migration was never executed and is not stored.");
+        }
+        try {
+            session.execute(prepareUpdateStatement(migration)
+                    .bind(migration.getScriptName(), migration.getMigrationScript(), migration.getChecksum()));
+        } catch (Exception e) {
+            throw new MigrationException(
+                    format("Unable to update migration for version '%d'", migration.getVersion()), e);
+        }
+    }
+
+    private PreparedStatement prepareUpdateStatement(DbMigration migration) {
+        if (updateMigrationStatement == null) {
+            updateMigrationStatement = session.prepare(format(
+                    UPDATE_MIGRATION_QUERY,
+                    SCHEMA_CF,
+                    CHECKSUM_COLUMN_NAME,
+                    migration.getVersion()));
+        }
+        return updateMigrationStatement;
     }
 
     private DbMigration mapRowToMigration(Row row) {

@@ -3,8 +3,7 @@ package org.cognitor.cassandra.it.migration;
 import com.datastax.driver.core.*;
 import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Configuration;
-import org.cognitor.cassandra.migration.Database;
-import org.cognitor.cassandra.migration.MigrationException;
+import org.cognitor.cassandra.migration.*;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
@@ -15,7 +14,9 @@ import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Optional;
 
+import static java.util.stream.Collectors.toList;
 import static org.cognitor.cassandra.CassandraJUnitRule.DEFAULT_SCRIPT_LOCATION;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.core.Is.is;
@@ -144,6 +145,33 @@ public class DatabaseTest {
         assertThat(database.getVersion(), is(equalTo(1)));
         assertThat(cassandra.getCluster().getMetadata()
                 .getKeyspace(CassandraJUnitRule.TEST_KEYSPACE).getFunctions().size(), is(equalTo(1)));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldThrowExceptionWhenMigrationUpdateForUnknownMigrationGiven() {
+        database.updateMigration(new DbMigration("testScript", 999, ""));
+    }
+
+    @Test
+    public void shouldUpdateMigrationWhenMigrationWithUpdatedFieldGiven() {
+        TaskChain migration = new TaskChainBuilder(cassandra.getCluster(),
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful"))
+                .buildTaskChain();
+        migration.execute();
+        // after migration the database object is closed
+        database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
+        Optional<Row> originalInitMigration = loadMigrations()
+                .stream()
+                .filter(row -> row.getString("script_name").equals("001_init.cql"))
+                .reduce((a,b) -> a.getString("script_name").equals("001_init.cql") ? a : b);
+
+        MigrationRepository repository = new MigrationRepository("/cassandra/migrationtest/updated");
+        List<DbMigration> migrations = repository.getMigrationsSinceVersion(1);
+        DbMigration initMigration = migrations.get(0);
+        database.updateMigration(initMigration);
+
+        List<Row> updatedMigrations = loadMigrations();
+        assertThat(updatedMigrations.get(0).getLong("checksum"), is(not(equalTo(originalInitMigration.get().getLong("checksum")))));
     }
 
     private List<Row> loadMigrations() {
