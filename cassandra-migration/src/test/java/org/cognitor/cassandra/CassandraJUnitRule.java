@@ -24,7 +24,6 @@ public class CassandraJUnitRule extends ExternalResource {
     public static final String DEFAULT_SCRIPT_LOCATION = "cassandraTestInit.cql";
 
     private static final long TIMEOUT = 60000L;
-    private static final String LOCALHOST = "127.0.0.1";
 
     private Cluster cluster;
     private final CQLDataSet dataSet;
