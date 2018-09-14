@@ -118,7 +118,7 @@ public class Database implements Closeable {
      * Makes sure the schema migration table exists. If it is not available it will be created.
      */
     private void ensureSchemaTable() {
-        if (schemaTablesIsNotExisting()) {
+        if (schemaTableIsNotExisting()) {
             createSchemaTable();
         } else if (schemaTableHasNoChecksumColumn()) {
             addChecksumColumnToMigrationTable();
@@ -137,7 +137,7 @@ public class Database implements Closeable {
                 .getColumn(CHECKSUM_COLUMN_NAME) == null;
     }
 
-    private boolean schemaTablesIsNotExisting() {
+    private boolean schemaTableIsNotExisting() {
         return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()).getTable(SCHEMA_CF) == null;
     }
 

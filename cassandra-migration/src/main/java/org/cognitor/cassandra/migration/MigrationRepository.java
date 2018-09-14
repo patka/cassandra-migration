@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -98,7 +99,7 @@ public class MigrationRepository {
      * Creates a new repository with the given scriptPath and the given
      * {@link ScriptCollector}.
      *
-     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptPath      the path on the classpath to the migration scripts. Must not be null.
      * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
@@ -110,7 +111,7 @@ public class MigrationRepository {
      * Creates a new repository with the given scriptPath and the given
      * {@link ScriptCollector}.
      *
-     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptPath      the path on the classpath to the migration scripts. Must not be null.
      * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
      * @param scannerRegistry A ScannerRegistry to create LocationScanner instances. Must not be null.
      * @throws MigrationException in case there is a problem reading the scripts in the path.
@@ -234,24 +235,23 @@ public class MigrationRepository {
      * excluded.
      *
      * @param startVersion the minimum version to be returned.
-     * @param endVersion the first version that should not be returned anymore.
+     * @param endVersion   the first version that should not be returned anymore.
      * @return a list of DbMigration objects or an empty list in case there is no match.
      */
     public List<DbMigration> getMigrationsSinceVersion(int startVersion, int endVersion) {
         if (startVersion > endVersion) {
             throw new IllegalArgumentException("endVersion cannot be smaller than startVersion. I think you got the order of arguments wrong :)");
         }
-        List<DbMigration> dbMigrations = new ArrayList<>();
-        migrationScripts.stream()
+        return migrationScripts.stream()
                 .filter(isScriptWithinVersionRange(startVersion, endVersion))
-                .forEach(script -> {
-            String content = loadScriptContent(script);
-            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
-        });
-        return dbMigrations;
+                .map(script -> {
+                    String content = loadScriptContent(script);
+                    return new DbMigration(script.getScriptName(), script.getVersion(), content);
+                })
+                .collect(Collectors.toList());
     }
 
-    private Predicate<ScriptFile> isScriptWithinVersionRange(int version, int endVersion) {
+    private static Predicate<ScriptFile> isScriptWithinVersionRange(int version, int endVersion) {
         return script -> script.getVersion() >= version && script.getVersion() < endVersion;
     }
 
