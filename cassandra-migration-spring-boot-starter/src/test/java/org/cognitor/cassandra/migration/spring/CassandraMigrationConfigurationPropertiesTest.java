@@ -26,6 +26,10 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.recalculateChecksumOnly:true");
         addEnvironment(context, "cassandra.migration.checksumValidation:true");
         addEnvironment(context, "cassandra.migration.checksumValidationOnly:true");
+        addEnvironment(context, "cassandra.migration.checksumValidation:true");
+        addEnvironment(context, "cassandra.migration.network-strategy.data-centers.boston=3");
+        addEnvironment(context, "cassandra.migration.network-strategy.data-centers.seattle=2");
+        addEnvironment(context, "cassandra.migration.network-strategy.data-centers.tokyo=2");
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
@@ -38,6 +42,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.isChecksumValidationOnly(), is(true));
         assertThat(properties.isRecalculateChecksum(), is(true));
         assertThat(properties.isRecalculateChecksumOnly(), is(true));
+        assertThat(properties.getReplicationStrategy().getName(), is("NetworkTopologyStrategy"));
     }
 
     @Test
