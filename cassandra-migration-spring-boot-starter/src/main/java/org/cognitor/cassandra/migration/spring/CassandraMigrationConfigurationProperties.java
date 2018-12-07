@@ -2,6 +2,10 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.driver.core.ConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
+import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
+import org.cognitor.cassandra.migration.spring.keyspace.NetworkStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.SimpleStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.StrategyDefinition;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -16,6 +20,9 @@ public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
+    private StrategyDefinition simpleStrategy = new SimpleStrategyDefinition(1);
+    private StrategyDefinition networkStrategy;
+    private boolean createKeyspace = false;
     private boolean checksumValidation = true;
     private boolean checksumValidationOnly = false;
     private boolean recalculateChecksumOnly = false;
@@ -60,6 +67,52 @@ public class CassandraMigrationConfigurationProperties {
      */
     public void setKeyspaceName(String keyspaceName) {
         this.keyspaceName = keyspaceName;
+    }
+
+    /**
+     * @return true if the keyspace should be created, false otherwise.
+     */
+    public boolean isCreateKeyspace() {
+        return createKeyspace;
+    }
+
+    /**
+     * Sets if the keyspace should be created before any migration.
+     *
+     * @param createKeyspace true if keyspace should be created.
+     */
+    public void setCreateKeyspace(boolean createKeyspace) {
+        this.createKeyspace = createKeyspace;
+    }
+
+    /**
+     * @return the strategy to use for creating keyspace. network strategy if is present,
+     * simple strategy otherwise.
+     */
+    public ReplicationStrategy getReplicationStrategy() {
+        if(networkStrategy == null) {
+            return simpleStrategy.getStrategy();
+        } else {
+            return networkStrategy.getStrategy();
+        }
+    }
+
+    /**
+     * Sets the simple replication strategy that should be used to create keyspace
+     *
+     * @param simpleStrategy the simple strategy. This setting is optional.
+     */
+    public void setSimpleStrategy(SimpleStrategyDefinition simpleStrategy) {
+        this.simpleStrategy = simpleStrategy;
+    }
+
+    /**
+     * Sets the network replication strategy that should be used to create keyspace
+     *
+     * @param networkStrategy the network strategy. This setting is optional.
+     */
+    public void setNetworkStrategy(NetworkStrategyDefinition networkStrategy) {
+        this.networkStrategy = networkStrategy;
     }
 
     /**

@@ -4,6 +4,7 @@ import com.datastax.driver.core.Cluster;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
+import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
 import org.cognitor.cassandra.migration.tasks.TaskChain;
@@ -42,13 +43,16 @@ public class CassandraMigrationAutoConfiguration {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
+        KeyspaceDefinition keyspaceDefinition = new KeyspaceDefinition(properties.getKeyspaceName())
+                .with(properties.getReplicationStrategy());
         return new TaskChainBuilder(cluster,
-                    new org.cognitor.cassandra.migration.Configuration(properties.getKeyspaceName())
+                    new org.cognitor.cassandra.migration.Configuration(keyspaceDefinition)
                 .setChecksumValidation(properties.isChecksumValidation())
                 .setValidateOnly(properties.isChecksumValidationOnly())
                 .setRecalculateChecksum(properties.isRecalculateChecksum())
                 .setRecalculateChecksumOnly(properties.isRecalculateChecksumOnly())
-                .setConsistencyLevel(properties.getConsistencyLevel()),
+                .setConsistencyLevel(properties.getConsistencyLevel())
+                .setCreateKeyspace(properties.isCreateKeyspace()),
                 createRepository())
                 .buildTaskChain();
     }
