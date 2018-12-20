@@ -47,6 +47,27 @@ public class CassandraMigrationAutoConfigurationTest {
         }
     }
 
+    @Test
+    public void shouldMigrateDatabaseWhenClusterGivenWithPrefix() {
+        AnnotationConfigApplicationContext context =
+            new AnnotationConfigApplicationContext();
+        addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
+        addEnvironment(context, "cassandra.migration.table-prefix:test_");
+        context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        Cluster cluster = context.getBean(Cluster.class);
+        context.getBean(MigrationTask.class);
+        try(Session session = cluster.connect(TEST_KEYSPACE)) {
+            List<Row> rows = session.execute("SELECT * FROM test_schema_migration").all();
+            assertThat(rows.size(), is(equalTo(1)));
+            Row migration = rows.get(0);
+            assertThat(migration.getBool("applied_successful"), is(true));
+            assertThat(migration.getTimestamp("executed_at"), is(not(nullValue())));
+            assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
+            assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        }
+    }
+
     @Configuration
     static class ClusterConfig {
         static final String TEST_KEYSPACE = "test_keyspace";
