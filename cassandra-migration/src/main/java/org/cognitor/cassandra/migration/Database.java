@@ -2,10 +2,10 @@ package org.cognitor.cassandra.migration;
 
 import static java.lang.String.format;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
-import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 import java.io.Closeable;
 import java.util.Date;
+import java.util.Optional;
 
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
@@ -15,16 +15,18 @@ import org.slf4j.LoggerFactory;
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.ConsistencyLevel;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.TableMetadata;
 import com.datastax.driver.core.exceptions.DriverException;
 
 /**
- * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
- * execute migrations.
+ * This class represents the Cassandra database. It is used to retrieve the current version of the database and to execute migrations.
  *
  * @author Patrick Kranz
  */
@@ -40,52 +42,77 @@ public class Database implements Closeable {
      * Insert statement that logs a migration into the schema_migration table.
      */
     private static final String INSERT_MIGRATION = "insert into %s"
-            + "(applied_successful, version, script_name, script, executed_at) values(?, ?, ?, ?, ?)";
+        + "(applied_successful, version, script_name, script, executed_at) values(?, ?, ?, ?, ?)";
 
     /**
      * Statement used to create the table that manages the migrations.
      */
     private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
-            + " (applied_successful boolean, version int, script_name varchar, script text,"
-            + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
+        + " (applied_successful boolean, version int, script_name varchar, script text,"
+        + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
 
     /**
      * The query that retrieves current schema version
      */
     private static final String VERSION_QUERY =
-            "select version from %s where applied_successful = True "
-                    + "order by version desc limit 1";
+        "select version from %s where applied_successful = True "
+            + "order by version desc limit 1";
 
     /**
      * Error message that is thrown if there is an error during the migration
      */
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
+    private final String tableName;
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final Cluster cluster;
     private final Session session;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
 
     public Database(Cluster cluster, Keyspace keyspace) {
+        this(cluster, keyspace, "");
+    }
+
+    public Database(Cluster cluster, Keyspace keyspace, String tablePrefix) {
+        this(cluster, keyspace, null, tablePrefix);
+    }
+
+    /**
+     * Creates a new instance of the database.
+     *
+     * @param cluster
+     *     the cluster that is connected to a cassandra instance
+     * @param keyspaceName
+     *     the keyspace name that will be managed by this instance
+     */
+    public Database(Cluster cluster, String keyspaceName) {
+        this(cluster, keyspaceName, "");
+    }
+
+    public Database(Cluster cluster, String keyspaceName, String tablePrefix) {
+        this(cluster, null, keyspaceName, tablePrefix);
+    }
+
+    private Database(Cluster cluster, Keyspace keyspace, String keyspaceName, String tablePrefix) {
         this.cluster = notNull(cluster, "cluster");
-        this.keyspace = notNull(keyspace, "keyspace");
-        this.keyspaceName = keyspace.getKeyspaceName();
-        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
+        this.keyspace = keyspace;
+        this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
+        this.tableName = tablePrefix + SCHEMA_CF;
         createKeyspaceIfRequired();
-        session = cluster.connect(keyspaceName);
+        session = cluster.connect(this.keyspaceName);
         ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, getTableName()));
     }
 
     private void createKeyspaceIfRequired() {
-        if (keyspaceExists()) {
+        if ( keyspace == null || keyspaceExists() ) {
             return;
         }
         try (Session session = this.cluster.connect()) {
             session.execute(this.keyspace.getCqlStatement());
-        } catch (DriverException exception) {
+        } catch ( DriverException exception ) {
             throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
         }
     }
@@ -95,39 +122,22 @@ public class Database implements Closeable {
     }
 
     /**
-     * Creates a new instance of the database.
-     *
-     * @param cluster      the cluster that is connected to a cassandra instance
-     * @param keyspaceName the keyspace name that will be managed by this instance
-     */
-    public Database(Cluster cluster, String keyspaceName) {
-        this.cluster = notNull(cluster, "cluster");
-        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
-        this.keyspace = null;
-        session = cluster.connect(keyspaceName);
-        ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
-    }
-
-    /**
-     * Closes the underlying session object. The cluster will not be touched
-     * and will stay open. Call this after all migrations are done.
-     * After calling this, this database instance can no longer be used.
+     * Closes the underlying session object. The cluster will not be touched and will stay open. Call this after all migrations are done. After calling this,
+     * this database instance can no longer be used.
      */
     public void close() {
         this.session.close();
     }
 
     /**
-     * Gets the current version of the database schema. This version is taken
-     * from the migration table and represent the latest successful entry.
+     * Gets the current version of the database schema. This version is taken from the migration table and represent the latest successful entry.
      *
      * @return the current schema version
      */
     public int getVersion() {
-        ResultSet resultSet = session.execute(format(VERSION_QUERY, SCHEMA_CF));
+        ResultSet resultSet = session.execute(format(VERSION_QUERY, getTableName()));
         Row result = resultSet.one();
-        if (result == null) {
+        if ( result == null ) {
             return 0;
         }
         return result.getInt(0);
@@ -142,56 +152,63 @@ public class Database implements Closeable {
         return this.keyspaceName;
     }
 
+    public String getTableName() {
+        return tableName;
+    }
+
     /**
      * Makes sure the schema migration table exists. If it is not available it will be created.
      */
     private void ensureSchemaTable() {
-        if (schemaTablesIsNotExisting()) {
+        if ( schemaTablesIsNotExisting() ) {
             createSchemaTable();
         }
     }
 
     private boolean schemaTablesIsNotExisting() {
-        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(SCHEMA_CF) == null;
+        Metadata metadata = cluster.getMetadata();
+        KeyspaceMetadata keyspace = metadata.getKeyspace(keyspaceName);
+        TableMetadata table = keyspace.getTable(getTableName());
+        return table == null;
     }
 
     private void createSchemaTable() {
-        session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
+        session.execute(format(CREATE_MIGRATION_CF, getTableName()));
     }
 
     /**
-     * Executes the given migration to the database and logs the migration along with the output in the migration table.
-     * In case of an error a {@link MigrationException} is thrown with the cause of the error inside.
+     * Executes the given migration to the database and logs the migration along with the output in the migration table. In case of an error a {@link
+     * MigrationException} is thrown with the cause of the error inside.
      *
-     * @param migration the migration to be executed.
-     * @throws MigrationException if the migration fails
+     * @param migration
+     *     the migration to be executed.
+     * @throws MigrationException
+     *     if the migration fails
      */
     public void execute(DbMigration migration) {
         notNull(migration, "migration");
         LOGGER.debug(format("About to execute migration %s to version %d", migration.getScriptName(),
-                migration.getVersion()));
+            migration.getVersion()));
         String lastStatement = null;
         try {
             SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
-            for (String statement : lexer.getCqlQueries()) {
+            for ( String statement : lexer.getCqlQueries() ) {
                 statement = statement.trim();
                 lastStatement = statement;
                 executeStatement(statement);
             }
             logMigration(migration, true);
             LOGGER.debug(format("Successfully applied migration %s to version %d",
-                    migration.getScriptName(), migration.getVersion()));
-        } catch (Exception exception) {
+                migration.getScriptName(), migration.getVersion()));
+        } catch ( Exception exception ) {
             logMigration(migration, false);
             String errorMessage = format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement);
             throw new MigrationException(errorMessage, exception, migration.getScriptName(), lastStatement);
         }
     }
 
-
-
     private void executeStatement(String statement) {
-        if (!statement.isEmpty()) {
+        if ( !statement.isEmpty() ) {
             SimpleStatement simpleStatement = new SimpleStatement(statement);
             simpleStatement.setConsistencyLevel(this.consistencyLevel);
             session.execute(simpleStatement);
@@ -201,12 +218,14 @@ public class Database implements Closeable {
     /**
      * Inserts the result of the migration into the migration table
      *
-     * @param migration     the migration that was executed
-     * @param wasSuccessful indicates if the migration was successful or not
+     * @param migration
+     *     the migration that was executed
+     * @param wasSuccessful
+     *     indicates if the migration was successful or not
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
-                migration.getScriptName(), migration.getMigrationScript(), new Date());
+            migration.getScriptName(), migration.getMigrationScript(), new Date());
         session.execute(boundStatement);
     }
 
@@ -217,7 +236,8 @@ public class Database implements Closeable {
     /**
      * Set the consistency level that should be used for schema upgrades. Default is <code>ConsistencyLevel.QUORUM</code>
      *
-     * @param consistencyLevel the consistency level to be used. Must not be null.
+     * @param consistencyLevel
+     *     the consistency level to be used. Must not be null.
      * @return the current database instance
      */
     public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
