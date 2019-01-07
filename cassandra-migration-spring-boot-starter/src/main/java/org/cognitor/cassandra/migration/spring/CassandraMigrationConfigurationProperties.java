@@ -1,13 +1,13 @@
 package org.cognitor.cassandra.migration.spring;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import com.datastax.driver.core.ConsistencyLevel;
-
 /**
- * Configuration properties for the cassandra migration library. These values should be set a properties file that is used inside the application, e.g.
- * application.properties.
+ * Configuration properties for the cassandra migration library.
+ * These values should be set a properties file that is used inside the
+ * application, e.g. application.properties.
  *
  * @author Patrick Kranz
  */
@@ -27,33 +27,33 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
-     * The location where the scripts reside on the classpath. The default is <code>MigrationRepository.DEFAULT_SCRIPT_PATH</code> which points to
-     * <code>cassandra/migration</code> on the classpath.
+     * The location where the scripts reside on the classpath.
+     * The default is <code>MigrationRepository.DEFAULT_SCRIPT_PATH</code> which
+     * points to <code>cassandra/migration</code> on the classpath.
      *
-     * @param scriptLocation
-     *     the location of the migration scripts. Must not be null.
-     * @throws IllegalArgumentException
-     *     when scriptLocation is null or empty
+     * @param scriptLocation the location of the migration scripts. Must not be null.
+     * @throws IllegalArgumentException when scriptLocation is null or empty
      */
     public void setScriptLocation(String scriptLocation) {
-        if ( scriptLocation == null || scriptLocation.isEmpty() ) {
+        if (scriptLocation == null || scriptLocation.isEmpty()) {
             throw new IllegalArgumentException("Script location cannot be unset.");
         }
         this.scriptLocation = scriptLocation;
     }
 
     /**
-     * @return the name of the keyspace. Can be null if it was not set before.
+     * @return the name of the keyspace. Can be null if it was not set
+     *          before.
      */
     public String getKeyspaceName() {
         return keyspaceName;
     }
 
     /**
-     * Sets the name of the keyspace that should be migrated. This setting is required in order for the migration to work.
+     * Sets the name of the keyspace that should be migrated. This
+     * setting is required in order for the migration to work.
      *
-     * @param keyspaceName
-     *     the name of the keyspace to be migrated
+     * @param keyspaceName the name of the keyspace to be migrated
      */
     public void setKeyspaceName(String keyspaceName) {
         this.keyspaceName = keyspaceName;
@@ -67,10 +67,10 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
-     * Sets the strategy that should be used when scripts are collected from the repository.
+     * Sets the strategy that should be used when scripts are collected
+     * from the repository.
      *
-     * @param strategy
-     *     the collector strategy. This setting is optional.
+     * @param strategy the collector strategy. This setting is optional.
      */
     public void setStrategy(ScriptCollectorStrategy strategy) {
         this.strategy = strategy;
@@ -91,10 +91,10 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
-     * Sets the consistency level which should be used to execute the schema migrations. Default is <code>ConsistencyLevel.QUORUM</code>
+     * Sets the consistency level which should be used to execute the schema migrations.
+     * Default is <code>ConsistencyLevel.QUORUM</code>
      *
-     * @param consistencyLevel
-     *     the consistency level to be used for migrations
+     * @param consistencyLevel the consistency level to be used for migrations
      */
     public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;

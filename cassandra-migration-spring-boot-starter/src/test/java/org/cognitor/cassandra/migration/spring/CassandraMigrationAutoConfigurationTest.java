@@ -50,14 +50,14 @@ public class CassandraMigrationAutoConfigurationTest {
     @Test
     public void shouldMigrateDatabaseWhenClusterGivenWithPrefix() {
         AnnotationConfigApplicationContext context =
-            new AnnotationConfigApplicationContext();
+                new AnnotationConfigApplicationContext();
         addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
         addEnvironment(context, "cassandra.migration.table-prefix:test_");
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
         Cluster cluster = context.getBean(Cluster.class);
         context.getBean(MigrationTask.class);
-        try(Session session = cluster.connect(TEST_KEYSPACE)) {
+        try (Session session = cluster.connect(TEST_KEYSPACE)) {
             List<Row> rows = session.execute("SELECT * FROM test_schema_migration").all();
             assertThat(rows.size(), is(equalTo(1)));
             Row migration = rows.get(0);
@@ -88,7 +88,7 @@ public class CassandraMigrationAutoConfigurationTest {
         }
 
         private void init() throws Exception {
-            EmbeddedCassandraServerHelper.startEmbeddedCassandra(YML_FILE_LOCATION, 30*1000L);
+            EmbeddedCassandraServerHelper.startEmbeddedCassandra(YML_FILE_LOCATION, 30 * 1000L);
             loadTestData();
         }
 
