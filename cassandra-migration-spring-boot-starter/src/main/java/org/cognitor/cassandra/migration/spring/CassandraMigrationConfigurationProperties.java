@@ -1,9 +1,8 @@
 package org.cognitor.cassandra.migration.spring;
 
+import com.datastax.driver.core.ConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import com.datastax.driver.core.ConsistencyLevel;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -17,6 +16,7 @@ public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
+    private String tablePrefix = "";
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
 
     /**
@@ -98,5 +98,14 @@ public class CassandraMigrationConfigurationProperties {
      */
     public void setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = consistencyLevel;
+    }
+
+    public String getTablePrefix() {
+        return tablePrefix;
+    }
+
+    public CassandraMigrationConfigurationProperties setTablePrefix(String tablePrefix) {
+        this.tablePrefix = tablePrefix;
+        return this;
     }
 }

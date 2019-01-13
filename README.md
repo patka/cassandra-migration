@@ -114,3 +114,4 @@ In your properties file you will have four new properties that can be set:
 * cassandra.migration.script-location Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations
+* cassandra.migration.table-prefix Prefix for the the migrations table name 

@@ -1,26 +1,18 @@
 package org.cognitor.cassandra.migration;
 
-import static java.lang.String.format;
-import static org.cognitor.cassandra.migration.util.Ensure.notNull;
-import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
-
-import java.io.Closeable;
-import java.util.Date;
-
+import com.datastax.driver.core.*;
+import com.datastax.driver.core.exceptions.DriverException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.datastax.driver.core.BoundStatement;
-import com.datastax.driver.core.Cluster;
-import com.datastax.driver.core.ConsistencyLevel;
-import com.datastax.driver.core.PreparedStatement;
-import com.datastax.driver.core.ResultSet;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import com.datastax.driver.core.exceptions.DriverException;
+import java.io.Closeable;
+import java.util.Date;
+import java.util.Optional;
+
+import static java.lang.String.format;
+import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 
 /**
  * This class represents the Cassandra database. It is used to retrieve the current version of the database and to
@@ -61,6 +53,7 @@ public class Database implements Closeable {
      */
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
+    private final String tableName;
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final Cluster cluster;
@@ -69,18 +62,40 @@ public class Database implements Closeable {
     private final PreparedStatement logMigrationStatement;
 
     public Database(Cluster cluster, Keyspace keyspace) {
+        this(cluster, keyspace, "");
+    }
+
+    public Database(Cluster cluster, Keyspace keyspace, String tablePrefix) {
+        this(cluster, keyspace, null, tablePrefix);
+    }
+
+    /**
+     * Creates a new instance of the database.
+     *
+     * @param cluster      the cluster that is connected to a cassandra instance
+     * @param keyspaceName the keyspace name that will be managed by this instance
+     */
+    public Database(Cluster cluster, String keyspaceName) {
+        this(cluster, keyspaceName, "");
+    }
+
+    public Database(Cluster cluster, String keyspaceName, String tablePrefix) {
+        this(cluster, null, keyspaceName, tablePrefix);
+    }
+
+    private Database(Cluster cluster, Keyspace keyspace, String keyspaceName, String tablePrefix) {
         this.cluster = notNull(cluster, "cluster");
-        this.keyspace = notNull(keyspace, "keyspace");
-        this.keyspaceName = keyspace.getKeyspaceName();
-        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
+        this.keyspace = keyspace;
+        this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
+        this.tableName = tablePrefix + SCHEMA_CF;
         createKeyspaceIfRequired();
-        session = cluster.connect(keyspaceName);
+        session = cluster.connect(this.keyspaceName);
         ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
+        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, getTableName()));
     }
 
     private void createKeyspaceIfRequired() {
-        if (keyspaceExists()) {
+        if (keyspace == null || keyspaceExists()) {
             return;
         }
         try (Session session = this.cluster.connect()) {
@@ -92,21 +107,6 @@ public class Database implements Closeable {
 
     private boolean keyspaceExists() {
         return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
-    }
-
-    /**
-     * Creates a new instance of the database.
-     *
-     * @param cluster      the cluster that is connected to a cassandra instance
-     * @param keyspaceName the keyspace name that will be managed by this instance
-     */
-    public Database(Cluster cluster, String keyspaceName) {
-        this.cluster = notNull(cluster, "cluster");
-        this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
-        this.keyspace = null;
-        session = cluster.connect(keyspaceName);
-        ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, SCHEMA_CF));
     }
 
     /**
@@ -125,7 +125,7 @@ public class Database implements Closeable {
      * @return the current schema version
      */
     public int getVersion() {
-        ResultSet resultSet = session.execute(format(VERSION_QUERY, SCHEMA_CF));
+        ResultSet resultSet = session.execute(format(VERSION_QUERY, getTableName()));
         Row result = resultSet.one();
         if (result == null) {
             return 0;
@@ -142,6 +142,10 @@ public class Database implements Closeable {
         return this.keyspaceName;
     }
 
+    public String getTableName() {
+        return tableName;
+    }
+
     /**
      * Makes sure the schema migration table exists. If it is not available it will be created.
      */
@@ -152,11 +156,14 @@ public class Database implements Closeable {
     }
 
     private boolean schemaTablesIsNotExisting() {
-        return cluster.getMetadata().getKeyspace(keyspaceName).getTable(SCHEMA_CF) == null;
+        Metadata metadata = cluster.getMetadata();
+        KeyspaceMetadata keyspace = metadata.getKeyspace(keyspaceName);
+        TableMetadata table = keyspace.getTable(getTableName());
+        return table == null;
     }
 
     private void createSchemaTable() {
-        session.execute(format(CREATE_MIGRATION_CF, SCHEMA_CF));
+        session.execute(format(CREATE_MIGRATION_CF, getTableName()));
     }
 
     /**
@@ -187,8 +194,6 @@ public class Database implements Closeable {
             throw new MigrationException(errorMessage, exception, migration.getScriptName(), lastStatement);
         }
     }
-
-
 
     private void executeStatement(String statement) {
         if (!statement.isEmpty()) {

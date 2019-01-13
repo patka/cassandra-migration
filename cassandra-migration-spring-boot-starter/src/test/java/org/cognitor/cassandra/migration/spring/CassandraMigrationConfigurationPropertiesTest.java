@@ -1,14 +1,13 @@
 package org.cognitor.cassandra.migration.spring;
 
+import com.datastax.driver.core.ConsistencyLevel;
+import org.junit.Test;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.junit.Assert.assertThat;
 import static org.springframework.boot.test.util.EnvironmentTestUtils.addEnvironment;
-
-import org.junit.Test;
-import org.springframework.context.annotation.AnnotationConfigApplicationContext;
-
-import com.datastax.driver.core.ConsistencyLevel;
 
 /**
  * @author Patrick Kranz
@@ -23,6 +22,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
         addEnvironment(context, "cassandra.migration.strategy:IGNORE_DUPLICATES");
         addEnvironment(context, "cassandra.migration.consistency-level:all");
+        addEnvironment(context, "cassandra.migration.table-prefix:prefix_");
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
@@ -31,6 +31,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(ConsistencyLevel.ALL)));
+        assertThat(properties.getTablePrefix(), is(equalTo("prefix_")));
     }
 
     @Test
@@ -44,5 +45,6 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.hasKeyspaceName(), is(false));
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migration")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
+        assertThat(properties.getTablePrefix(), is(equalTo("")));
     }
 }
