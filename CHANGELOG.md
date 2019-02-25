@@ -3,6 +3,7 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+* Pull Request 24: Provide a prefix for the database migration table
 
 ## Released
 ### v2.2.0

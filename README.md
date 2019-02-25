@@ -88,6 +88,12 @@ perfectly legal to have the same version number once with a successful execution
 for example, if the first try failed and the script was fixed afterwards. However, you will only see the last failing
 execution. If the same script fails twice the first failure will be overwritten.
 
+If you want the migration table to be prefixed, e.g. you are using the same keyspace for multiple applications
+(hint: you should not :)) and don't want all applications to write into the same migration table you can prefix the
+table name. Just provide the prefix in the constructor of the Database or as a spring option (see below).
+The prefix will be separated by an underscore from the "schema_migration" string, e.g. with prefix "myApp" the table
+name would be "myApp_schema_migration". 
+
 ## Maven
 If you are using maven you can add cassandra-migration as a dependency to your project like this:
 ```xml

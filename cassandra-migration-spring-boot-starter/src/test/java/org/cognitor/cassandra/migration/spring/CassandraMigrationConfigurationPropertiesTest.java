@@ -22,7 +22,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
         addEnvironment(context, "cassandra.migration.strategy:IGNORE_DUPLICATES");
         addEnvironment(context, "cassandra.migration.consistency-level:all");
-        addEnvironment(context, "cassandra.migration.table-prefix:prefix_");
+        addEnvironment(context, "cassandra.migration.table-prefix:prefix");
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
@@ -31,7 +31,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(ConsistencyLevel.ALL)));
-        assertThat(properties.getTablePrefix(), is(equalTo("prefix_")));
+        assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
     }
 
     @Test

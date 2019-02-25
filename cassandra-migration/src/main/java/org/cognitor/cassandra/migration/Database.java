@@ -87,11 +87,18 @@ public class Database implements Closeable {
         this.cluster = notNull(cluster, "cluster");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
-        this.tableName = tablePrefix + SCHEMA_CF;
+        this.tableName = createTableName(tablePrefix);
         createKeyspaceIfRequired();
         session = cluster.connect(this.keyspaceName);
         ensureSchemaTable();
         this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, getTableName()));
+    }
+
+    private static String createTableName(String tablePrefix) {
+        if (tablePrefix == null || tablePrefix.isEmpty()) {
+            return SCHEMA_CF;
+        }
+        return String.format("%s_%s", tablePrefix, SCHEMA_CF);
     }
 
     private void createKeyspaceIfRequired() {
