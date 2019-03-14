@@ -32,7 +32,7 @@ Scripts should be named in the following schema:
 <version>_<name>.cql
 ```
 
-If the '.clq' extension is missing the file will be ignored. The 'version' is required to figure out the latest
+If the `.cql` extension is missing the file will be ignored. The `version` is required to figure out the latest
 version of the scripts and relates to the version that is stored in the database schema information table.
 The version should start with one as an empty database is considered to have a version of
 zero. Leading zeros for better sorting are accepted.
