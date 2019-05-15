@@ -7,14 +7,17 @@ import org.cognitor.cassandra.migration.*;
 import org.cognitor.cassandra.migration.keyspace.KeyspaceDefinition;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.tasks.KeyspaceCreationTask;
+import org.cognitor.cassandra.migration.tasks.RecalculateChecksumTask;
 import org.cognitor.cassandra.migration.tasks.TaskChain;
 import org.cognitor.cassandra.migration.tasks.TaskChainBuilder;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static org.cognitor.cassandra.CassandraJUnitRule.DEFAULT_SCRIPT_LOCATION;
@@ -44,7 +47,7 @@ public class DatabaseTest {
 
     @Test
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndEmptyDatabaseGiven() {
-        TaskChain migration = new TaskChainBuilder(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful")).buildTaskChain();
+        TaskChain migration = buildTaskChain("cassandra/migrationtest/successful");
         migration.execute();
         // after migration the database object is closed
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
@@ -74,9 +77,7 @@ public class DatabaseTest {
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
         // provide a path without scripts to simulate this
-        TaskChain taskChain = new TaskChainBuilder(
-                cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("migrationtest")).buildTaskChain();
+        TaskChain taskChain = buildTaskChain("migrationtest");
         taskChain.execute();
 
         assertThat(database.getVersion(), is(equalTo(0)));
@@ -84,10 +85,7 @@ public class DatabaseTest {
 
     @Test
     public void shouldThrowExceptionAndLogFailedMigrationWhenWrongMigrationScriptGiven() {
-        TaskChain taskChain = new TaskChainBuilder(
-                cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/failing/brokenstatement"))
-                .buildTaskChain();
+        TaskChain taskChain = buildTaskChain("cassandra/migrationtest/failing/brokenstatement");
         MigrationException exception = null;
         try {
             taskChain.execute();
@@ -136,10 +134,7 @@ public class DatabaseTest {
 
     @Test
     public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
-        TaskChain taskChain = new TaskChainBuilder(
-                cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/function"))
-                .buildTaskChain();
+        TaskChain taskChain = buildTaskChain("cassandra/migrationtest/function");
         taskChain.execute();
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
         assertThat(database.getVersion(), is(equalTo(1)));
@@ -154,9 +149,7 @@ public class DatabaseTest {
 
     @Test
     public void shouldUpdateMigrationWhenMigrationWithUpdatedFieldGiven() {
-        TaskChain migration = new TaskChainBuilder(cassandra.getCluster(),
-                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation("cassandra/migrationtest/successful"))
-                .buildTaskChain();
+        TaskChain migration = buildTaskChain("cassandra/migrationtest/successful");
         migration.execute();
         // after migration the database object is closed
         database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
@@ -174,9 +167,40 @@ public class DatabaseTest {
         assertThat(updatedMigrations.get(0).getLong("checksum"), is(not(equalTo(originalInitMigration.get().getLong("checksum")))));
     }
 
+    @Test
+    public void shouldProperlyRecalculateChecksumsWhenColumnWasDropped() {
+        TaskChain migration = buildTaskChain("cassandra/migrationtest/successful");
+        migration.execute();
+
+        final List<Long> checksums = loadMigrations().stream().map(row -> row.getLong("checksum")).collect(toList());
+
+        assertThat(getSession().execute("ALTER TABLE schema_migration DROP checksum").wasApplied(), Matchers.is(true));
+
+        // after migration the database object is closed
+        database = new Database(cassandra.getCluster(), new Configuration(CassandraJUnitRule.TEST_KEYSPACE));
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/successful");
+        RecalculateChecksumTask task = new RecalculateChecksumTask(database, repository);
+        task.execute();
+
+        List<DbMigration> updatedMigrations = database.loadMigrations();
+        for(int i=0; i<checksums.size(); ++i) {
+            assertThat(updatedMigrations.get(i).getChecksum(), is(equalTo(checksums.get(i))));
+        }
+    }
+
+    private TaskChain buildTaskChain(String s) {
+        return new TaskChainBuilder(cassandra.getCluster(),
+                new Configuration(CassandraJUnitRule.TEST_KEYSPACE).setMigrationLocation(s))
+                .buildTaskChain();
+    }
+
     private List<Row> loadMigrations() {
-        Session session = cassandra.getCluster().connect(CassandraJUnitRule.TEST_KEYSPACE);
+        Session session = getSession();
         ResultSet resultSet = session.execute(new SimpleStatement("SELECT * FROM schema_migration;"));
         return resultSet.all();
+    }
+
+    private Session getSession() {
+        return cassandra.getCluster().connect(CassandraJUnitRule.TEST_KEYSPACE);
     }
 }
