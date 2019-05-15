@@ -17,6 +17,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "cassandra.migration")
 public class CassandraMigrationConfigurationProperties {
+    private boolean enabled = true;
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
@@ -28,6 +29,14 @@ public class CassandraMigrationConfigurationProperties {
     private boolean recalculateChecksumOnly = false;
     private boolean recalculateChecksum = false;
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
 
     /**
      * @return The location of the migration scripts. Never null.

@@ -2,7 +2,9 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.driver.core.ConsistencyLevel;
 import org.junit.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Configuration;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
@@ -30,7 +32,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.network-strategy.data-centers.boston=3");
         addEnvironment(context, "cassandra.migration.network-strategy.data-centers.seattle=2");
         addEnvironment(context, "cassandra.migration.network-strategy.data-centers.tokyo=2");
-        context.register(CassandraMigrationAutoConfiguration.class);
+        context.register(PropertiesTestConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
@@ -49,7 +51,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
     public void shouldReturnDefaultValuesWhenNoOptionalPropertiesGiven() {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        context.register(CassandraMigrationAutoConfiguration.class);
+        context.register(PropertiesTestConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
@@ -57,4 +59,15 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migration")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
     }
+
+    @Configuration
+    @EnableConfigurationProperties({CassandraMigrationConfigurationProperties.class})
+    static class PropertiesTestConfiguration {
+        private final CassandraMigrationConfigurationProperties properties;
+
+        public PropertiesTestConfiguration(CassandraMigrationConfigurationProperties properties) {
+            this.properties = properties;
+        }
+    }
+
 }

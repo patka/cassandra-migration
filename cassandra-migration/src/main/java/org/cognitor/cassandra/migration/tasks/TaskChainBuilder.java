@@ -32,6 +32,10 @@ public class TaskChainBuilder {
 
     public TaskChain buildTaskChain() {
         Database database = new Database(cluster, configuration);
+        return buildTaskChain(database);
+    }
+
+    public TaskChain buildTaskChain(Database database) {
         TaskChain chain = new TaskChain();
         if (configuration.isRecalculateChecksumOnly()) {
             return chain.addTask(new RecalculateChecksumTask(database, migrationRepository));
