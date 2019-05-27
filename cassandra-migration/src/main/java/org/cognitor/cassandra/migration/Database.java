@@ -53,7 +53,7 @@ public class Database implements Closeable {
     private static final String LOAD_MIGRATIONS_QUERY = "SELECT * FROM " + SCHEMA_CF + " WHERE applied_successful = true";
 
     private static final String UPDATE_MIGRATION_QUERY = "UPDATE %s SET script_name=?, script=?, %s=? "
-            + "WHERE applied_successful = true AND version = %d";
+            + "WHERE applied_successful = true AND version = ?";
 
     /**
      * The query that retrieves current schema version
@@ -171,8 +171,9 @@ public class Database implements Closeable {
             throw new IllegalArgumentException("Given migration was never executed and is not stored.");
         }
         try {
-            session.execute(prepareUpdateStatement(migration)
-                    .bind(migration.getScriptName(), migration.getMigrationScript(), migration.getChecksum()));
+            final PreparedStatement preparedStatement = prepareUpdateStatement(migration);
+            session.execute(preparedStatement
+                    .bind(migration.getScriptName(), migration.getMigrationScript(), migration.getChecksum(), migration.getVersion()));
         } catch (Exception e) {
             throw new MigrationException(
                     format("Unable to update migration for version '%d'", migration.getVersion()), e);
@@ -184,8 +185,7 @@ public class Database implements Closeable {
             updateMigrationStatement = session.prepare(format(
                     UPDATE_MIGRATION_QUERY,
                     SCHEMA_CF,
-                    CHECKSUM_COLUMN_NAME,
-                    migration.getVersion()));
+                    CHECKSUM_COLUMN_NAME));
         }
         return updateMigrationStatement;
     }
