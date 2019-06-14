@@ -4,6 +4,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
 * Pull Request 24: Provide a prefix for the database migration table
+* Pull Request 34: Documentation improvement
+* Upgrade to Spring 1.5.21 to get rid of potential security problems in the previously used version.
+  As Spring is only a provided dependency and the applications using this library must configure
+  the version themselves, there is no security issue for consumers of the library.
 
 ## Released
 ### v2.2.0
