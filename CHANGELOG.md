@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Upgrade to Spring 1.5.21 to get rid of potential security problems in the previously used version.
   As Spring is only a provided dependency and the applications using this library must configure
   the version themselves, there is no security issue for consumers of the library.
+* The Spring test dependency in the spring boot starter module is now scoped with 'test' and was updated
+  to version 5.0.8
 
 ## Released
 ### v2.2.0
