@@ -190,7 +190,7 @@ public class Database implements Closeable {
             for (String statement : lexer.getCqlQueries()) {
                 statement = statement.trim();
                 lastStatement = statement;
-                executeStatement(statement);
+                executeStatement(statement, migration);
             }
             logMigration(migration, true);
             LOGGER.debug(format("Successfully applied migration %s to version %d",
@@ -202,11 +202,16 @@ public class Database implements Closeable {
         }
     }
 
-    private void executeStatement(String statement) {
+    private void executeStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = new SimpleStatement(statement);
             simpleStatement.setConsistencyLevel(this.consistencyLevel);
-            session.execute(simpleStatement);
+            ResultSet resultSet = session.execute(simpleStatement);
+            if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
+                throw new MigrationException("Schema agreement could not be reached. " +
+                        "You might consider increasing 'maxSchemaAgreementWaitSeconds'.",
+                        migration.getScriptName());
+            }
         }
     }
 
