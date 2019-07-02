@@ -3,6 +3,9 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+
+## Released
+### v2.2.1
 * Pull Request 24: Provide a prefix for the database migration table
 * Pull Request 34: Documentation improvement
 * Upgrade to Spring 1.5.21 to get rid of potential security problems in the previously used version.
@@ -12,7 +15,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   to version 5.0.8
 * Issue 36: Schema modifications are done by checking if schema is in agreement.
 
-## Released
 ### v2.2.0
 * Pull Request 20: Consistency level can now be changed for the schema migration execution
 * Issue 19: Comments that do not start at the beginning of the line are now supported
