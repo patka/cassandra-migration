@@ -1,4 +1,4 @@
-# Cassandra Schema Migration for Java (v2.2.0) [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration)
+# Cassandra Schema Migration for Java [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.cognitor.cassandra/cassandra-migration)
 
 ## Purpose
 This library can be used to implement migrations for the Cassandra database schema inside your Java application.
@@ -56,6 +56,10 @@ Multi line comments are not supported.
 
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.
+Besides this after the scripts are executed, it wil be checked if the schema is in agreement by calling the
+corresponding method on the metadata of the ResultSet. That call is blocking until either an agreement has been
+reached or the configured `maxSchemaAgreementWaitSeconds` have been passed. This value can be configured on the Cluster
+builder. 
 Error handling is not really implemented (and as far as I know not really possible from a database point of view).
 If one script fails the migration is stopped and an exception is thrown. The exception contains the name of
 the failing script as well as the broken statement in case the error happened during the execution of a

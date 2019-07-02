@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   the version themselves, there is no security issue for consumers of the library.
 * The Spring test dependency in the spring boot starter module is now scoped with 'test' and was updated
   to version 5.0.8
+* Issue 36: Schema modifications are done by checking if schema is in agreement.
 
 ## Released
 ### v2.2.0
