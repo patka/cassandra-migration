@@ -1,24 +1,27 @@
 package org.cognitor.cassandra.it.migration;
 
-import com.datastax.driver.core.KeyspaceMetadata;
-import com.datastax.driver.core.Row;
-import com.datastax.driver.core.Session;
-import com.datastax.driver.core.SimpleStatement;
-import org.cognitor.cassandra.CassandraJUnitRule;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
-import org.junit.Rule;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
-import static org.cognitor.cassandra.CassandraJUnitRule.DEFAULT_SCRIPT_LOCATION;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.core.Is.is;
+import static java.util.Arrays.asList;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
 /**
@@ -26,69 +29,98 @@ import static org.junit.Assert.assertThat;
  */
 public class DatabaseTest {
 
-    @Rule
-    public final CassandraJUnitRule cassandra = new CassandraJUnitRule(DEFAULT_SCRIPT_LOCATION, "cassandra.yml");
+    private static final String KEYSPACE = "test_keyspace";
+    private static final String NETWORK_KEYSPACE = "network_keyspace";
+    private static final String NEW_KEYSPACE = "new_keyspace";
+    private static final String LOCALHOST = "127.0.0.1";
+    private CqlSession session;
+
+    @Before
+    public void before() {
+        session = createSession();
+        session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
+                "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
+    }
+
+    @After
+    public void after() {
+        session = createSession();
+
+        for (String keyspace : asList(KEYSPACE, NETWORK_KEYSPACE, NEW_KEYSPACE)) {
+            session.execute("DROP KEYSPACE IF EXISTS " + keyspace + ";");
+        }
+        session.close();
+    }
+
+    private CqlSession createSession() {
+        return new CqlSessionBuilder()
+                .addContactPoint(new InetSocketAddress(LOCALHOST, 9042))
+                .withLocalDatacenter("datacenter1")
+                .build();
+    }
 
     @Test
     public void shouldReturnSchemaVersionOfZeroInAnEmptyDatabase() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        Database database = new Database(session, KEYSPACE);
         assertThat(database.getVersion(), is(equalTo(0)));
     }
 
     @Test
     public void shouldCreateMigrationTableWithPrefixWhenPrefixGiven() {
-        new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE, "prefix");
-        assertThat(cassandra.getCluster().getMetadata().getKeyspace(CassandraJUnitRule.TEST_KEYSPACE)
-                .getTable("prefix_schema_migration"), is(notNullValue()));
-        assertThat(cassandra.getCluster().getMetadata().getKeyspace(CassandraJUnitRule.TEST_KEYSPACE)
-                .getTable("schema_migration"), is(nullValue()));
+        new Database(session, KEYSPACE, "prefix");
+        assertThat(session.getMetadata().getKeyspace(KEYSPACE).get()
+                .getTable("prefix_schema_migration").isPresent(), is(true));
+        assertThat(session.getMetadata().getKeyspace(KEYSPACE).get()
+                .getTable("schema_migration").isPresent(), is(false));
     }
 
     @Test
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndPrefixAndEmptyDatabaseGiven() {
         final String prefix = "prefix";
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE, prefix);
+        Database database = new Database(session, KEYSPACE, prefix);
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
         migrationTask.migrate();
         // after migration the database object is closed
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE, prefix);
+        session = createSession();
+        database = new Database(session, KEYSPACE, prefix);
         assertThat(database.getVersion(), is(equalTo(3)));
 
         List<Row> results = loadMigrations(prefix);
         assertThat(results.size(), is(equalTo(3)));
-        assertThat(results.get(0).getBool("applied_successful"), is(true));
-        assertThat(results.get(1).getBool("applied_successful"), is(true));
-        assertThat(results.get(2).getBool("applied_successful"), is(true));
+        assertThat(results.get(0).getBoolean("applied_successful"), is(true));
+        assertThat(results.get(1).getBoolean("applied_successful"), is(true));
+        assertThat(results.get(2).getBoolean("applied_successful"), is(true));
     }
 
     @Test
     public void shouldApplyMigrationToDatabaseWhenMigrationsAndEmptyDatabaseGiven() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        Database database = new Database(session, KEYSPACE);
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/successful"));
         migrationTask.migrate();
         // after migration the database object is closed
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        session = createSession();
+        database = new Database(session, KEYSPACE);
         assertThat(database.getVersion(), is(equalTo(3)));
 
         List<Row> results = loadMigrations("");
         assertThat(results.size(), is(equalTo(3)));
-        assertThat(results.get(0).getBool("applied_successful"), is(true));
-        assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(0).getBoolean("applied_successful"), is(true));
+        assertThat(results.get(0).getInstant("executed_at"), is(not(nullValue())));
         assertThat(results.get(0).getString("script_name"), is(equalTo("001_init.cql")));
         assertThat(results.get(0).getString("script"), is(startsWith("CREATE TABLE")));
-        assertThat(results.get(1).getBool("applied_successful"), is(true));
-        assertThat(results.get(1).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(1).getBoolean("applied_successful"), is(true));
+        assertThat(results.get(1).getInstant("executed_at"), is(not(nullValue())));
         assertThat(results.get(1).getString("script_name"), is(equalTo("002_add_events_table.cql")));
         assertThat(results.get(1).getString("script"), is(equalTo("CREATE TABLE EVENTS (event_id uuid primary key, event_name varchar);")));
-        assertThat(results.get(2).getBool("applied_successful"), is(true));
-        assertThat(results.get(2).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(2).getBoolean("applied_successful"), is(true));
+        assertThat(results.get(2).getInstant("executed_at"), is(not(nullValue())));
         assertThat(results.get(2).getString("script_name"), is(equalTo("003_add_another_table.cql")));
         assertThat(results.get(2).getString("script"), is(equalTo("CREATE TABLE THINGS (thing_id uuid primary key, thing_name varchar);")));
     }
 
     @Test
     public void shouldNotApplyAnyMigrationWhenDatabaseAndScriptsAreAtSameVersion() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        Database database = new Database(session, KEYSPACE);
         // provide a path without scripts to simulate this
         MigrationRepository repository = new MigrationRepository("migrationtest");
         new MigrationTask(database, repository).migrate();
@@ -98,7 +130,7 @@ public class DatabaseTest {
 
     @Test
     public void shouldThrowExceptionAndLogFailedMigrationWhenWrongMigrationScriptGiven() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        Database database = new Database(session, KEYSPACE);
         MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/failing/brokenstatement");
         MigrationException exception = null;
         try {
@@ -113,18 +145,18 @@ public class DatabaseTest {
 
         List<Row> results = loadMigrations("");
         assertThat(results.size(), is(equalTo(1)));
-        assertThat(results.get(0).getBool("applied_successful"), is(false));
-        assertThat(results.get(0).getTimestamp("executed_at"), is(not(nullValue())));
+        assertThat(results.get(0).getBoolean("applied_successful"), is(false));
+        assertThat(results.get(0).getInstant("executed_at"), is(not(nullValue())));
     }
 
     @Test
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndKeyspaceDefinitionGiven() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
-        assertThat(cassandra.getCluster().getMetadata().getKeyspace("new_keyspace"), is(nullValue()));
-        Keyspace keyspace = new Keyspace("new_keyspace");
-        Database db = new Database(cassandra.getCluster(), keyspace);
+        Database database = new Database(session, KEYSPACE);
+        assertThat(session.getMetadata().getKeyspace(NEW_KEYSPACE).isPresent(), is(false));
+        Keyspace keyspace = new Keyspace(NEW_KEYSPACE);
+        Database db = new Database(session, keyspace);
 
-        KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("new_keyspace");
+        KeyspaceMetadata keyspaceMetadata = session.getMetadata().getKeyspace(NEW_KEYSPACE).get();
         assertThat(keyspaceMetadata, is(notNullValue()));
         assertThat(keyspaceMetadata.getReplication().get("class"),
                 is(equalTo("org.apache.cassandra.locator.SimpleStrategy")));
@@ -134,13 +166,13 @@ public class DatabaseTest {
 
     @Test
     public void shouldCreateKeyspaceWhenDatabaseWithoutKeyspaceAndNetworkKeyspaceDefinitionGiven() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
-        assertThat(cassandra.getCluster().getMetadata().getKeyspace("network_keyspace"), is(nullValue()));
-        Keyspace keyspace = new Keyspace("network_keyspace")
+        Database database = new Database(session, KEYSPACE);
+        assertThat(session.getMetadata().getKeyspace(NETWORK_KEYSPACE).isPresent(), is(false));
+        Keyspace keyspace = new Keyspace(NETWORK_KEYSPACE)
                 .with(new NetworkStrategy().with("dc1", 1));
-        Database db = new Database(cassandra.getCluster(), keyspace);
+        Database db = new Database(session, keyspace);
 
-        KeyspaceMetadata keyspaceMetadata = cassandra.getCluster().getMetadata().getKeyspace("network_keyspace");
+        KeyspaceMetadata keyspaceMetadata = session.getMetadata().getKeyspace(NETWORK_KEYSPACE).get();
         assertThat(keyspaceMetadata, is(notNullValue()));
         assertThat(keyspaceMetadata.getReplication().get("class"),
                 is(equalTo("org.apache.cassandra.locator.NetworkTopologyStrategy")));
@@ -149,22 +181,22 @@ public class DatabaseTest {
 
     @Test
     public void shouldCreateFunctionWhenMigrationScriptWithFunctionGiven() {
-        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        Database database = new Database(session, KEYSPACE);
         MigrationTask migrationTask = new MigrationTask(database, new MigrationRepository("cassandra/migrationtest/function"));
         migrationTask.migrate();
-        database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        session = createSession();
+        database = new Database(session, KEYSPACE);
         assertThat(database.getVersion(), is(equalTo(1)));
-        assertThat(cassandra.getCluster().getMetadata()
-                .getKeyspace(CassandraJUnitRule.TEST_KEYSPACE).getFunctions().size(), is(equalTo(1)));
+        assertThat(session.getMetadata()
+                .getKeyspace(KEYSPACE).get().getFunctions().size(), is(equalTo(1)));
     }
 
     private List<Row> loadMigrations(String tablePrefix) {
-        Session session = cassandra.getCluster().connect(CassandraJUnitRule.TEST_KEYSPACE);
         if (tablePrefix == null || tablePrefix.isEmpty()) {
             return session.execute(
-                    new SimpleStatement("SELECT * FROM schema_migration;")).all();
+                    SimpleStatement.newInstance("SELECT * FROM schema_migration;")).all();
         }
         return session.execute(
-                new SimpleStatement(String.format("SELECT * FROM %s_schema_migration;", tablePrefix))).all();
+                SimpleStatement.newInstance(String.format("SELECT * FROM %s_schema_migration;", tablePrefix))).all();
     }
 }

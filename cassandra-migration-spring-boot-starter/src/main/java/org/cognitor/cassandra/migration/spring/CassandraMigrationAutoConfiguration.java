@@ -1,6 +1,6 @@
 package org.cognitor.cassandra.migration.spring;
 
-import com.datastax.driver.core.Cluster;
+import com.datastax.oss.driver.api.core.CqlSession;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
@@ -24,7 +24,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @EnableConfigurationProperties(CassandraMigrationConfigurationProperties.class)
 @AutoConfigureAfter(CassandraAutoConfiguration.class)
-@ConditionalOnClass(Cluster.class)
+@ConditionalOnClass(CqlSession.class)
 public class CassandraMigrationAutoConfiguration {
     private final CassandraMigrationConfigurationProperties properties;
 
@@ -35,16 +35,16 @@ public class CassandraMigrationAutoConfiguration {
 
 
     @Bean(initMethod = "migrate")
-    @ConditionalOnBean(Cluster.class)
+    @ConditionalOnBean(value = CqlSession.class)
     @ConditionalOnMissingBean(MigrationTask.class)
-    public MigrationTask migrationTask(Cluster cluster) {
+    public MigrationTask migrationTask(CqlSession cqlSession) {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
 
         MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cluster, properties.getKeyspaceName(), properties.getTablePrefix())
+        return new MigrationTask(new Database(cqlSession, properties.getKeyspaceName(), properties.getTablePrefix())
                 .setConsistencyLevel(properties.getConsistencyLevel()),
                 migrationRepository);
     }

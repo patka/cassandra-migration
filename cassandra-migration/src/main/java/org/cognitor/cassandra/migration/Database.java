@@ -1,14 +1,19 @@
 package org.cognitor.cassandra.migration;
 
-import com.datastax.driver.core.*;
-import com.datastax.driver.core.exceptions.DriverException;
+import com.datastax.oss.driver.api.core.ConsistencyLevel;
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
+import com.datastax.oss.driver.api.core.DriverException;
+import com.datastax.oss.driver.api.core.cql.*;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
-import java.util.Date;
+import java.time.Instant;
 import java.util.Optional;
 
 import static java.lang.String.format;
@@ -56,42 +61,46 @@ public class Database implements Closeable {
     private final String tableName;
     private final String keyspaceName;
     private final Keyspace keyspace;
-    private final Cluster cluster;
-    private final Session session;
-    private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
+    private final CqlSession session;
+    private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
 
-    public Database(Cluster cluster, Keyspace keyspace) {
-        this(cluster, keyspace, "");
+    public Database(CqlSession session, Keyspace keyspace) {
+        this(session, keyspace, "");
     }
 
-    public Database(Cluster cluster, Keyspace keyspace, String tablePrefix) {
-        this(cluster, keyspace, null, tablePrefix);
+    public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
+        this(session, keyspace, null, tablePrefix);
     }
 
     /**
      * Creates a new instance of the database.
      *
-     * @param cluster      the cluster that is connected to a cassandra instance
+     * @param session      the session that is connected to a cassandra instance
      * @param keyspaceName the keyspace name that will be managed by this instance
      */
-    public Database(Cluster cluster, String keyspaceName) {
-        this(cluster, keyspaceName, "");
+    public Database(CqlSession session, String keyspaceName) {
+        this(session, keyspaceName, "");
     }
 
-    public Database(Cluster cluster, String keyspaceName, String tablePrefix) {
-        this(cluster, null, keyspaceName, tablePrefix);
+    public Database(CqlSession session, String keyspaceName, String tablePrefix) {
+        this(session, null, keyspaceName, tablePrefix);
     }
 
-    private Database(Cluster cluster, Keyspace keyspace, String keyspaceName, String tablePrefix) {
-        this.cluster = notNull(cluster, "cluster");
+    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix) {
+        this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
         this.tableName = createTableName(tablePrefix);
         createKeyspaceIfRequired();
-        session = cluster.connect(this.keyspaceName);
+        useKeyspace();
         ensureSchemaTable();
-        this.logMigrationStatement = session.prepare(format(INSERT_MIGRATION, getTableName()));
+        this.logMigrationStatement = this.session.prepare(format(INSERT_MIGRATION, getTableName()));
+    }
+
+    private void useKeyspace() {
+        LOGGER.info("Configuring the keyspace for the ongoing session.");
+        session.execute("USE " + keyspaceName);
     }
 
     private static String createTableName(String tablePrefix) {
@@ -105,7 +114,7 @@ public class Database implements Closeable {
         if (keyspace == null || keyspaceExists()) {
             return;
         }
-        try (Session session = this.cluster.connect()) {
+        try {
             session.execute(this.keyspace.getCqlStatement());
         } catch (DriverException exception) {
             throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
@@ -113,7 +122,7 @@ public class Database implements Closeable {
     }
 
     private boolean keyspaceExists() {
-        return cluster.getMetadata().getKeyspace(keyspace.getKeyspaceName()) != null;
+        return session.getMetadata().getKeyspace(keyspaceName).isPresent();
     }
 
     /**
@@ -157,16 +166,19 @@ public class Database implements Closeable {
      * Makes sure the schema migration table exists. If it is not available it will be created.
      */
     private void ensureSchemaTable() {
-        if (schemaTablesIsNotExisting()) {
-            createSchemaTable();
+        if (schemaTablesIsExisting()) {
+            return;
         }
+        createSchemaTable();
     }
 
-    private boolean schemaTablesIsNotExisting() {
-        Metadata metadata = cluster.getMetadata();
-        KeyspaceMetadata keyspace = metadata.getKeyspace(keyspaceName);
-        TableMetadata table = keyspace.getTable(getTableName());
-        return table == null;
+    private boolean schemaTablesIsExisting() {
+        Metadata metadata = session.getMetadata();
+        Optional<KeyspaceMetadata> keyspace = metadata.getKeyspace(keyspaceName);
+        return keyspace
+                .map(keyspaceMetadata -> keyspaceMetadata.getTable(getTableName())
+                        .isPresent())
+                .orElse(false);
     }
 
     private void createSchemaTable() {
@@ -204,8 +216,8 @@ public class Database implements Closeable {
 
     private void executeStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
-            SimpleStatement simpleStatement = new SimpleStatement(statement);
-            simpleStatement.setConsistencyLevel(this.consistencyLevel);
+            SimpleStatement simpleStatement = SimpleStatement.newInstance(statement)
+                    .setConsistencyLevel(consistencyLevel);
             ResultSet resultSet = session.execute(simpleStatement);
             if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
                 throw new MigrationException("Schema agreement could not be reached. " +
@@ -223,7 +235,7 @@ public class Database implements Closeable {
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
-                migration.getScriptName(), migration.getMigrationScript(), new Date());
+                migration.getScriptName(), migration.getMigrationScript(), Instant.now());
         session.execute(boundStatement);
     }
 
