@@ -20,11 +20,11 @@ There are some things to consider when using it:
       before the migration.
     * the session will be closed after the migration
 * since the library will issue a `USE <keyspace>` on the session instance, the migrations scripts
-should continue continue to work use usually. So there is no need to add fully qualified table names
-to existing scripts
+should continue to work as usual. So there is no need to add fully qualified table names
+to existing scripts.
 * If you are using spring boot, you have to provide a name to the current `CqlSession` instance that is
 supposed to be used with this library. You can do this by adding the name to the `@Bean` annotation. 
-In order to make sure the session that this session will not be used by your application, you can
+In order to make sure that this session will not be used by your application, you can
 mark the application session as primary. 
 Here is an example for a programmatic configuration:
 ```
@@ -43,6 +43,13 @@ public CqlSession applicationCqlSession() {
 In order to be sure to use the correct name, there is a a public constant in 
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
 when declaring the session bean.
+
+### Testing in v4
+Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is
+not yet released with support for driver version 4, the only option at the moment to run the integration tests
+is to run them against a running instance on localhost.
+As the tests also test the creation of user defined functions you need to change the configuration parameter
+`enabled_user_defined_functions` from false to true in the cassandra.yaml config file.
 
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
