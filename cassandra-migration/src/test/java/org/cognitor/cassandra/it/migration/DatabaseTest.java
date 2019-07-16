@@ -125,7 +125,9 @@ public class DatabaseTest {
         MigrationRepository repository = new MigrationRepository("migrationtest");
         new MigrationTask(database, repository).migrate();
 
-        assertThat(database.getVersion(), is(equalTo(0)));
+        Database openDatabase = new Database(createSession(), KEYSPACE);
+        assertThat(openDatabase.getVersion(), is(equalTo(0)));
+        assertThat(session.isClosed(), is(true));
     }
 
     @Test

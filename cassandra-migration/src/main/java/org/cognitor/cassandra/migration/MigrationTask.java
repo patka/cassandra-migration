@@ -45,6 +45,7 @@ public class MigrationTask {
         if (databaseIsUpToDate()) {
             LOGGER.info(format("Keyspace %s is already up to date at version %d", database.getKeyspaceName(),
                     database.getVersion()));
+            database.close();
             return;
         }
 

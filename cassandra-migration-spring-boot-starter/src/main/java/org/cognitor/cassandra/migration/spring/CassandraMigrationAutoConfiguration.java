@@ -9,6 +9,7 @@ import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -26,6 +27,7 @@ import org.springframework.context.annotation.Configuration;
 @AutoConfigureAfter(CassandraAutoConfiguration.class)
 @ConditionalOnClass(CqlSession.class)
 public class CassandraMigrationAutoConfiguration {
+    public static final String CQL_SESSION_BEAN_NAME = "cassandraMigrationCqlSession";
     private final CassandraMigrationConfigurationProperties properties;
 
     @Autowired
@@ -37,7 +39,7 @@ public class CassandraMigrationAutoConfiguration {
     @Bean(initMethod = "migrate")
     @ConditionalOnBean(value = CqlSession.class)
     @ConditionalOnMissingBean(MigrationTask.class)
-    public MigrationTask migrationTask(CqlSession cqlSession) {
+    public MigrationTask migrationTask(@Qualifier(CQL_SESSION_BEAN_NAME) CqlSession cqlSession) {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");

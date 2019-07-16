@@ -17,6 +17,7 @@ import org.springframework.context.annotation.Configuration;
 import java.net.InetSocketAddress;
 import java.util.List;
 
+import static org.cognitor.cassandra.migration.spring.CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
@@ -97,7 +98,7 @@ public class CassandraMigrationAutoConfigurationTest {
     static class ClusterConfig {
         private static final String LOCALHOST = "127.0.0.1";
 
-        @Bean
+        @Bean(name = CQL_SESSION_BEAN_NAME)
         public CqlSession session() {
             return new CqlSessionBuilder()
                     .addContactPoint(new InetSocketAddress(LOCALHOST, 9042))
