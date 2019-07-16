@@ -7,6 +7,43 @@ The usage is oriented on the popular tools for relational databases like flyway 
 If you want to use this library with Spring Boot you can also scroll down to the description
 of how to use the Spring Boot Starter.
 
+## Datastax Driver Version 4
+If you already migrated your project to version 4 of the Datastax Driver you can use the code that is
+in the branch `master_v4`. You can use it by referencing the maven artifact version <current_version>_4.
+The first available version is 2.2.1_v4.
+
+There are some things to consider when using it:
+* As the `Cluster` class has been removed by Datastax you have to pass a `CqlSession` instance into the
+`Database` object. You should not use the session that you pass here anywhere else because:
+    * as the session can or cannot be connected to a keyspace, the `Database` has to trigger a
+      `USE <keyspace>` command at some point, especially if the keyspace should be created
+      before the migration.
+    * the session will be closed after the migration
+* since the library will issue a `USE <keyspace>` on the session instance, the migrations scripts
+should continue continue to work use usually. So there is no need to add fully qualified table names
+to existing scripts
+* If you are using spring boot, you have to provide a name to the current `CqlSession` instance that is
+supposed to be used with this library. You can do this by adding the name to the `@Bean` annotation. 
+In order to make sure the session that this session will not be used by your application, you can
+mark the application session as primary. 
+Here is an example for a programmatic configuration:
+```
+@Bean(name = "cassandraMigrationCqlSession")
+public CqlSession cassandraMigrationCqlSession() {
+  // session creation code here
+}
+
+@Bean
+@Primary
+public CqlSession applicationCqlSession() {
+  // session creation code here
+}
+```
+
+In order to be sure to use the correct name, there is a a public constant in 
+`CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
+when declaring the session bean.
+
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
 cluster object all you need to do is integrate the next lines in your projects startup code:
