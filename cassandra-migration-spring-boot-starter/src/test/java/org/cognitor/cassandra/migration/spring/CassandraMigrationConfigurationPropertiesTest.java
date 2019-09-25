@@ -23,6 +23,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         addEnvironment(context, "cassandra.migration.strategy:IGNORE_DUPLICATES");
         addEnvironment(context, "cassandra.migration.consistency-level:all");
         addEnvironment(context, "cassandra.migration.table-prefix:prefix");
+        addEnvironment(context, "cassandra.migration.with-consensus:true");
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
@@ -32,6 +33,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(ConsistencyLevel.ALL)));
         assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
+        assertThat(properties.getWithConsensus(), is(true));
     }
 
     @Test
@@ -46,5 +48,6 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migration")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
         assertThat(properties.getTablePrefix(), is(equalTo("")));
+        assertThat(properties.getWithConsensus(), is(false));
     }
 }

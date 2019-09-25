@@ -21,6 +21,7 @@ public class MigrationTask {
 
     private final Database database;
     private final MigrationRepository repository;
+    private final boolean withConsensus;
 
     /**
      * Creates a migration task that uses the given database and repository.
@@ -29,8 +30,19 @@ public class MigrationTask {
      * @param repository the repository that contains the migration scripts
      */
     public MigrationTask(Database database, MigrationRepository repository) {
+        this(database, repository, false);
+    }
+
+    /**
+     * Creates a migration task that uses the given database and repository.
+     *
+     * @param database the database that should be migrated
+     * @param repository the repository that contains the migration scripts
+     */
+    public MigrationTask(Database database, MigrationRepository repository, boolean withConsensus) {
         this.database = notNull(database, "database");
         this.repository = notNull(repository, "repository");
+        this.withConsensus = notNull(withConsensus, "withConsensus");
     }
 
     /**
@@ -48,9 +60,20 @@ public class MigrationTask {
             return;
         }
 
-        List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
-        migrations.forEach(database::execute);
-        LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));
+        try {
+            if (!withConsensus || database.takeLeadOnMigrations(repository.getLatestVersion())) {
+                if (!databaseIsUpToDate()) {
+                    List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
+                    migrations.forEach(database::execute);
+                    LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(),
+                            database.getVersion()));
+                }
+            }
+        } finally {
+            if (withConsensus) {
+                database.removeLeadOnMigrations();
+            }
+        }
         database.close();
     }
 

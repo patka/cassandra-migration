@@ -18,6 +18,7 @@ public class CassandraMigrationConfigurationProperties {
     private String keyspaceName;
     private String tablePrefix = "";
     private ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
+    private Boolean withConsensus = false;
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -107,5 +108,19 @@ public class CassandraMigrationConfigurationProperties {
     public CassandraMigrationConfigurationProperties setTablePrefix(String tablePrefix) {
         this.tablePrefix = tablePrefix;
         return this;
+    }
+
+    public Boolean getWithConsensus() {
+        return withConsensus;
+    }
+
+    /**
+     * Sets wether or not the migration should use consensus to prevent
+     * concurrent schema updates.
+     *
+     * @param withConsensus enable/disable leader election for migrations
+     */
+    public void setWithConsensus(Boolean withConsensus) {
+        this.withConsensus = withConsensus;
     }
 }

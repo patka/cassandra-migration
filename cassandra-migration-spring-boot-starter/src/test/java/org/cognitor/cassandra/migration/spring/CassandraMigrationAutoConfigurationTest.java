@@ -32,6 +32,7 @@ public class CassandraMigrationAutoConfigurationTest {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
         addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
+        addEnvironment(context, "cassandra.migration.with-consensus:true");
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
         Cluster cluster = context.getBean(Cluster.class);
