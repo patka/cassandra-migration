@@ -110,12 +110,12 @@ public class CassandraMigrationConfigurationProperties {
         return this;
     }
 
-    public Boolean getWithConsensus() {
+    public Boolean isWithConsensus() {
         return withConsensus;
     }
 
     /**
-     * Sets wether or not the migration should use consensus to prevent
+     * Sets whether or not the migration should use consensus to prevent
      * concurrent schema updates.
      *
      * @param withConsensus enable/disable leader election for migrations

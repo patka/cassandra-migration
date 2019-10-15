@@ -38,6 +38,7 @@ public class MigrationTask {
      *
      * @param database the database that should be migrated
      * @param repository the repository that contains the migration scripts
+     * @param withConsensus if the migration should be handled by a single process at once, using LWT based leader election
      */
     public MigrationTask(Database database, MigrationRepository repository, boolean withConsensus) {
         this.database = notNull(database, "database");

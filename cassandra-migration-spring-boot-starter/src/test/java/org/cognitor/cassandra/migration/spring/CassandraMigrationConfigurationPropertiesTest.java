@@ -33,7 +33,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(ConsistencyLevel.ALL)));
         assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
-        assertThat(properties.getWithConsensus(), is(true));
+        assertThat(properties.isWithConsensus(), is(true));
     }
 
     @Test
@@ -48,6 +48,6 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migration")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
         assertThat(properties.getTablePrefix(), is(equalTo("")));
-        assertThat(properties.getWithConsensus(), is(false));
+        assertThat(properties.isWithConsensus(), is(false));
     }
 }

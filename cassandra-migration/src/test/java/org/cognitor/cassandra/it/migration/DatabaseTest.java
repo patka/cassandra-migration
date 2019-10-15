@@ -4,8 +4,10 @@ import com.datastax.driver.core.KeyspaceMetadata;
 import com.datastax.driver.core.Row;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
+import com.datastax.driver.core.VersionNumber;
 import com.google.common.collect.Lists;
 
+import org.apache.tools.ant.taskdefs.condition.IsTrue;
 import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
@@ -228,5 +230,20 @@ public class DatabaseTest {
         }
         return session.execute(
                 new SimpleStatement(String.format("SELECT * FROM %s_schema_migration;", tablePrefix))).all();
+    }
+
+    @Test
+    public void testCassandraVersionCheck() {
+        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("1.1.14")), is(false));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("1.2.19")), is(false));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("2.0.10")), is(true));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("2.1.19")), is(true));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("2.2.14")), is(true));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("3.0.15")), is(true));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("3.11.4")), is(true));
+        assertThat(database.isVersionAtLeastV2(VersionNumber.parse("4.0")), is(true));
+        database.close();
+
     }
 }
