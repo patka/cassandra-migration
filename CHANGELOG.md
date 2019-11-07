@@ -5,6 +5,14 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### v2.3.0
+* Pull Request 43: Adding leader election. If you are running a database with version >= 2.0
+  cassandra-migration will now try to select a host that will perform the migration
+  in case it runs on multiple hosts. (Thanks to Alexander Dejanovski)
+
+### v2.2.1_v4
+* Same functionality as 2.2.1 but relies on the new Datastax v4 driver
+ 
 ### v2.2.1
 * Pull Request 31: Provide a prefix for the database migration table
 * Pull Request 34: Documentation improvement
