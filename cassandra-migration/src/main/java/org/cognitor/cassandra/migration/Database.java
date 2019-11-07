@@ -385,7 +385,7 @@ public class Database implements Closeable {
      * Check if the Cassandra version is 2.0 or more
      *
      * @param cassandraVersion the version of Cassandra we're testing against
-     * @return true if version is >= 2.0, false if not
+     * @return true if version is &gt;= 2.0, false if not
      */
     public boolean isVersionAtLeastV2(VersionNumber cassandraVersion) {
         return cassandraVersion.compareTo(VersionNumber.parse("2.0")) >= 0;
