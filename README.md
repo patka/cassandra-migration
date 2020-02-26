@@ -96,8 +96,6 @@ only the first script file for a particular version. As this can lead to unpredi
 it is just a matter of which script is found first, this behavior is no longer the default.
 
 ## Script content
-The script format is rather simple. It allows one statement per line and lines should be finished
-with a ';' character. Every line that is not empty and is not a single line comment will be executed against the Cassandra instance.
 Single line comments are indicated by either '//' or '--' characters.
 Multi line comments are not supported.
 

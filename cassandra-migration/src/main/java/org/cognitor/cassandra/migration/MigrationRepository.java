@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
@@ -74,7 +75,7 @@ public class MigrationRepository {
 
     private final Pattern commentPattern;
     private final ScannerRegistry scannerRegistry;
-    private List<ScriptFile> migrationScripts;
+    private final List<ScriptFile> migrationScripts;
     private final ScriptCollector scriptCollector;
 
     /**
@@ -174,7 +175,7 @@ public class MigrationRepository {
             URI script = scriptResources.nextElement().toURI();
             LOGGER.debug("Potential script folder: {}", script.toString());
             if (!scannerRegistry.supports(script.getScheme())) {
-                LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.");
+                LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.", script.getScheme());
                 continue;
             }
             LocationScanner scanner = scannerRegistry.getScanner(script.getScheme());
@@ -251,11 +252,12 @@ public class MigrationRepository {
     }
 
     private String readResourceFileAsString(String resourceName, ClassLoader classLoader) throws IOException {
-        StringBuilder fileContent = new StringBuilder(256);
-        new BufferedReader(
-                new InputStreamReader(classLoader.getResourceAsStream(resourceName), SCRIPT_ENCODING))
-                    .lines().filter(line -> !isLineComment(line)).forEach(fileContent::append);
-        return fileContent.toString();
+        return new BufferedReader(new InputStreamReader(
+                classLoader.getResourceAsStream(resourceName),
+                SCRIPT_ENCODING
+        )).lines()
+                .filter(line -> !isLineComment(line))
+                .collect(Collectors.joining(System.lineSeparator()));
     }
 
     private boolean isLineComment(String line) {

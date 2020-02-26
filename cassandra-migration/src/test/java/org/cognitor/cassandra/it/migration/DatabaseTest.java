@@ -271,4 +271,12 @@ public class DatabaseTest {
         return session.execute(
                 SimpleStatement.newInstance(String.format("SELECT * FROM %s_schema_migration;", tablePrefix))).all();
     }
+
+    @Test
+    public void supportsMultilineStatements() {
+        Database database = new Database(session, KEYSPACE);
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/multiline");
+        MigrationTask migrationTask = new MigrationTask(database, repository);
+        migrationTask.migrate();
+    }
 }
