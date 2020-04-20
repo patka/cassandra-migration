@@ -5,6 +5,9 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### v.2.3.1
+* Pull Request 46: Fixes issue 42. Multiline CQL statements are now supported. (Thanks to Jan Švajcr)
+
 ### v2.3.0
 * Pull Request 43: Adding leader election. If you are running a database with version >= 2.0
   cassandra-migration will now try to select a host that will perform the migration
