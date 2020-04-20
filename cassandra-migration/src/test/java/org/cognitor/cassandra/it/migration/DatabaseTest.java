@@ -7,7 +7,6 @@ import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.VersionNumber;
 import com.google.common.collect.Lists;
 
-import org.apache.tools.ant.taskdefs.condition.IsTrue;
 import org.cognitor.cassandra.CassandraJUnitRule;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
@@ -245,5 +244,13 @@ public class DatabaseTest {
         assertThat(database.isVersionAtLeastV2(VersionNumber.parse("4.0")), is(true));
         database.close();
 
+    }
+
+    @Test
+    public void supportsMultilineStatements() {
+        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/multiline");
+        MigrationTask migrationTask = new MigrationTask(database, repository);
+        migrationTask.migrate();
     }
 }
