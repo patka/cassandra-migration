@@ -378,4 +378,8 @@ public class Database implements Closeable {
     public boolean isVersionAtLeastV2(VersionNumber cassandraVersion) {
         return cassandraVersion.compareTo(VersionNumber.parse("2.0")) >= 0;
     }
+
+    public void setExecutionStrategy(StatementExecutionStrategy strategy) {
+        this.executionStrategy = notNull(strategy, "strategy");
+    }
 }
