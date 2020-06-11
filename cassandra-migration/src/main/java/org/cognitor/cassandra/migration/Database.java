@@ -104,6 +104,7 @@ public class Database implements Closeable {
     private final PreparedStatement releaseMigrationLeadStatement;
     private final VersionNumber cassandraVersion;
     private boolean tookLead = false;
+    private StatementExecutionStrategy executionStrategy = new DefaultExecutionStrategy();
 
     public Database(Cluster cluster, Keyspace keyspace) {
         this(cluster, keyspace, "");
@@ -250,36 +251,23 @@ public class Database implements Closeable {
      */
     public void execute(DbMigration migration) {
         notNull(migration, "migration");
+        ExecutionContext executionContext = new ExecutionContext(migration, session, consistencyLevel);
         LOGGER.debug(format("About to execute migration %s to version %d", migration.getScriptName(),
                 migration.getVersion()));
-        String lastStatement = null;
         try {
             SimpleCQLLexer lexer = new SimpleCQLLexer(migration.getMigrationScript());
             for (String statement : lexer.getCqlQueries()) {
                 statement = statement.trim();
-                lastStatement = statement;
-                executeStatement(statement, migration);
+                executionContext.setCurrentStatement(statement);
+                executionStrategy.executeStatement(executionContext);
             }
             logMigration(migration, true);
             LOGGER.debug(format("Successfully applied migration %s to version %d",
                     migration.getScriptName(), migration.getVersion()));
         } catch (Exception exception) {
             logMigration(migration, false);
-            String errorMessage = format(MIGRATION_ERROR_MSG, migration.getScriptName(), lastStatement);
-            throw new MigrationException(errorMessage, exception, migration.getScriptName(), lastStatement);
-        }
-    }
-
-    private void executeStatement(String statement, DbMigration migration) {
-        if (!statement.isEmpty()) {
-            SimpleStatement simpleStatement = new SimpleStatement(statement);
-            simpleStatement.setConsistencyLevel(this.consistencyLevel);
-            ResultSet resultSet = session.execute(simpleStatement);
-            if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
-                throw new MigrationException("Schema agreement could not be reached. " +
-                        "You might consider increasing 'maxSchemaAgreementWaitSeconds'.",
-                        migration.getScriptName());
-            }
+            String errorMessage = format(MIGRATION_ERROR_MSG, migration.getScriptName(), executionContext.getCurrentStatement());
+            throw new MigrationException(errorMessage, exception, migration.getScriptName(), executionContext.getCurrentStatement());
         }
     }
 
