@@ -3,6 +3,8 @@ package org.cognitor.cassandra.migration;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
+import org.cognitor.cassandra.migration.filter.IdempotentFilter;
+import org.cognitor.cassandra.migration.filter.ScriptFilter;
 import org.cognitor.cassandra.migration.scanner.LocationScanner;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.slf4j.Logger;
@@ -77,6 +79,7 @@ public class MigrationRepository {
     private final ScannerRegistry scannerRegistry;
     private List<ScriptFile> migrationScripts;
     private final ScriptCollector scriptCollector;
+    private final ScriptFilter scriptFilter;
 
     /**
      * Creates a new repository with the <code>DEFAULT_SCRIPT_PATH</code> configured and a
@@ -116,6 +119,17 @@ public class MigrationRepository {
     }
 
     /**
+     * Creates a new repository with the given scriptPath and the given {@link ScriptFilter}.
+     *
+     * @param scriptPath   the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptFilter the filter used to read/update original script. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(String scriptPath, ScriptFilter scriptFilter) {
+        this(scriptPath, new FailOnDuplicatesCollector(), new ScannerRegistry(), scriptFilter);
+    }
+
+    /**
      * Creates a new repository with the given scriptPath and the given
      * {@link ScriptCollector}.
      *
@@ -125,8 +139,24 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
+        this(scriptPath, scriptCollector, scannerRegistry, new IdempotentFilter());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPath and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPath the path on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @param scannerRegistry A ScannerRegistry to create LocationScanner instances. Must not be null.
+     * @param scriptFilter the filter used to read/update original script. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry,
+                               ScriptFilter scriptFilter) {
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
+        this.scriptFilter = notNull(scriptFilter, "scriptFilter");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
             migrationScripts = scanForScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
@@ -237,7 +267,8 @@ public class MigrationRepository {
         List<DbMigration> dbMigrations = new ArrayList<>();
         migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
             String content = loadScriptContent(script);
-            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
+            String updatedContent = scriptFilter.filter(content);
+            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), updatedContent));
         });
         return dbMigrations;
     }
