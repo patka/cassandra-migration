@@ -3,6 +3,8 @@ package org.cognitor.cassandra.migration;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.ScriptCollector;
 import org.cognitor.cassandra.migration.collector.ScriptFile;
+import org.cognitor.cassandra.migration.filter.NoOpFilter;
+import org.cognitor.cassandra.migration.filter.ScriptFilter;
 import org.cognitor.cassandra.migration.scanner.LocationScanner;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.slf4j.Logger;
@@ -77,6 +79,7 @@ public class MigrationRepository {
     private final ScannerRegistry scannerRegistry;
     private List<ScriptFile> migrationScripts;
     private final ScriptCollector scriptCollector;
+    private ScriptFilter scriptFilter = new NoOpFilter();
 
     /**
      * Creates a new repository with the <code>DEFAULT_SCRIPT_PATH</code> configured and a
@@ -133,6 +136,10 @@ public class MigrationRepository {
         } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }
+    }
+
+    public void setScriptFilter(ScriptFilter scriptFilter) {
+        this.scriptFilter = scriptFilter;
     }
 
     /**
@@ -237,7 +244,8 @@ public class MigrationRepository {
         List<DbMigration> dbMigrations = new ArrayList<>();
         migrationScripts.stream().filter(script -> script.getVersion() > version).forEach(script -> {
             String content = loadScriptContent(script);
-            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), content));
+            String updatedContent = scriptFilter.filter(content);
+            dbMigrations.add(new DbMigration(script.getScriptName(), script.getVersion(), updatedContent));
         });
         return dbMigrations;
     }
