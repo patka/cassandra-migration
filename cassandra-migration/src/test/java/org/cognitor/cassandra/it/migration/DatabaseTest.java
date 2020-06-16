@@ -2,6 +2,8 @@ package org.cognitor.cassandra.it.migration;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
@@ -16,6 +18,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -32,7 +35,8 @@ public class DatabaseTest {
     private static final String KEYSPACE = "test_keyspace";
     private static final String NETWORK_KEYSPACE = "network_keyspace";
     private static final String NEW_KEYSPACE = "new_keyspace";
-    private static final String LOCALHOST = "127.0.0.1";
+    private static final String CASSANDRA_HOST = "127.0.0.1";
+    private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
     private CqlSession session;
 
     @Before
@@ -44,7 +48,9 @@ public class DatabaseTest {
 
     @After
     public void after() {
-        session = createSession();
+        if (session.isClosed()) {
+            session = createSession();
+        }
 
         for (String keyspace : asList(KEYSPACE, NETWORK_KEYSPACE, NEW_KEYSPACE)) {
             session.execute("DROP KEYSPACE IF EXISTS " + keyspace + ";");
@@ -53,8 +59,13 @@ public class DatabaseTest {
     }
 
     private CqlSession createSession() {
+        DriverConfigLoader loader = DriverConfigLoader.programmaticBuilder()
+                .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(REQUEST_TIMEOUT_IN_SECONDS))
+                .withBoolean(DefaultDriverOption.REQUEST_WARN_IF_SET_KEYSPACE, false)
+                .build();
         return new CqlSessionBuilder()
-                .addContactPoint(new InetSocketAddress(LOCALHOST, 9042))
+                .addContactPoint(new InetSocketAddress(CASSANDRA_HOST, 9042))
+                .withConfigLoader(loader)
                 .withLocalDatacenter("datacenter1")
                 .build();
     }

@@ -2,6 +2,8 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.CqlSessionBuilder;
+import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
+import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
@@ -15,6 +17,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.util.List;
 
 import static org.cognitor.cassandra.migration.spring.CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME;
@@ -96,12 +99,18 @@ public class CassandraMigrationAutoConfigurationTest {
 
     @Configuration
     static class ClusterConfig {
-        private static final String LOCALHOST = "127.0.0.1";
+        private static final String CASSANDRA_HOST = "127.0.0.1";
+        private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
 
         @Bean(name = CQL_SESSION_BEAN_NAME)
         public CqlSession session() {
+            DriverConfigLoader loader = DriverConfigLoader.programmaticBuilder()
+                    .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(REQUEST_TIMEOUT_IN_SECONDS))
+                    .withBoolean(DefaultDriverOption.REQUEST_WARN_IF_SET_KEYSPACE, false)
+                    .build();
             return new CqlSessionBuilder()
-                    .addContactPoint(new InetSocketAddress(LOCALHOST, 9042))
+                    .withConfigLoader(loader)
+                    .addContactPoint(new InetSocketAddress(CASSANDRA_HOST, 9042))
                     .withLocalDatacenter("datacenter1")
                     .build();
         }

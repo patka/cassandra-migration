@@ -17,7 +17,8 @@ There are some things to consider when using it:
 `Database` object. You should not use the session that you pass here anywhere else because:
     * as the session can or cannot be connected to a keyspace, the `Database` has to trigger a
       `USE <keyspace>` command at some point, especially if the keyspace should be created
-      before the migration.
+      before the migration. That could make your session instance end up being set for a keyspace your
+      application does not expect.
     * the session will be closed after the migration
 * since the library will issue a `USE <keyspace>` on the session instance, the migrations scripts
 should continue to work as usual. So there is no need to add fully qualified table names
@@ -47,7 +48,9 @@ when declaring the session bean.
 ### Testing in v4
 Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is
 not yet released with support for driver version 4, the only option at the moment to run the integration tests
-is to run them against a running instance on localhost.
+is to run them against a running instance on localhost. In all integration tests there is a static
+field declared that is called `CASSANDRA_HOST`. You can modify that if you cassandra instance runs on 
+a different host.
 As the tests also test the creation of user defined functions you need to change the configuration parameter
 `enabled_user_defined_functions` from false to true in the cassandra.yaml config file.
 

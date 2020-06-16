@@ -65,9 +65,9 @@
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>com.datastax.cassandra</groupId>
-                <artifactId>cassandra-driver-core</artifactId>
-                <version>4.0.0</version>
+                <groupId>com.datastax.oss</groupId>
+                <artifactId>java-driver-core</artifactId>
+                <version>4.6.0</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
