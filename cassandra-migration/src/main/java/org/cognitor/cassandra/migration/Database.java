@@ -6,15 +6,18 @@ import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.api.core.DriverException;
 import com.datastax.oss.driver.api.core.cql.*;
 import com.datastax.oss.driver.api.core.metadata.Metadata;
-import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.datastax.oss.driver.api.core.servererrors.InvalidQueryException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import static java.lang.String.format;
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
@@ -34,6 +37,11 @@ public class Database implements Closeable {
     private static final String SCHEMA_CF = "schema_migration";
 
     /**
+     * The name of the table that is used for leader election on migrations
+     */
+    private static final String SCHEMA_LEADER_CF = "schema_migration_leader";
+
+    /**
      * Insert statement that logs a migration into the schema_migration table.
      */
     private static final String INSERT_MIGRATION = "insert into %s"
@@ -42,28 +50,60 @@ public class Database implements Closeable {
     /**
      * Statement used to create the table that manages the migrations.
      */
-    private static final String CREATE_MIGRATION_CF = "CREATE TABLE %s"
+    private static final String CREATE_MIGRATION_CF = "CREATE TABLE IF NOT EXISTS %s"
             + " (applied_successful boolean, version int, script_name varchar, script text,"
             + " executed_at timestamp, PRIMARY KEY (applied_successful, version))";
 
     /**
+     * Statement used to create the table that manages the leader election on migrations.
+     */
+    private static final String CREATE_LEADER_CF = "CREATE TABLE IF NOT EXISTS %s"
+            + " (keyspace_name text, leader uuid, took_lead_at timestamp, leader_hostname text, PRIMARY KEY (keyspace_name))";
+
+    /**
+     * The query that attempts to get the lead on schema migrations
+     */
+    private static final String TAKE_LEAD_QUERY =
+            "INSERT INTO %s (keyspace_name, leader, took_lead_at, leader_hostname) VALUES (?, ?, dateOf(now()), ?) IF NOT EXISTS USING TTL %s";
+
+    /**
+     * The query that releases the lead on schema migrations
+     */
+    private static final String RELEASE_LEAD_QUERY = "DELETE FROM %s where keyspace_name = ? IF leader = ?";
+
+    /**
      * The query that retrieves current schema version
      */
-    private static final String VERSION_QUERY =
-            "select version from %s where applied_successful = True "
-                    + "order by version desc limit 1";
+    private static final String VERSION_QUERY = "select version from %s where applied_successful = True "
+            + "order by version desc limit 1";
 
     /**
      * Error message that is thrown if there is an error during the migration
      */
     private static final String MIGRATION_ERROR_MSG = "Error during migration of script %s while executing '%s'";
 
+    /**
+     * TTL of the inserts in the schema leader table (if consensus is used for the migration), in seconds.
+     */
+    private static final int LEAD_TTL = 300;
+
+    /**
+     * Wait time between attempts to take the lead on schema migrations (in milliseconds)
+     */
+    private static final int TAKE_LEAD_WAIT_TIME = 10000;
+
+    private final UUID instanceId = UUID.randomUUID();
+    private final String instanceAddress;
     private final String tableName;
+    private final String leaderTableName;
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
     private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
+    private final PreparedStatement takeMigrationLeadStatement;
+    private final PreparedStatement releaseMigrationLeadStatement;
+    private boolean tookLead = false;
 
     public Database(CqlSession session, Keyspace keyspace) {
         this(session, keyspace, "");
@@ -91,23 +131,34 @@ public class Database implements Closeable {
         this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
-        this.tableName = createTableName(tablePrefix);
+        this.tableName = createTableName(tablePrefix, SCHEMA_CF);
+        this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
         this.logMigrationStatement = this.session.prepare(format(INSERT_MIGRATION, getTableName()));
+        this.takeMigrationLeadStatement = session.prepare(format(TAKE_LEAD_QUERY, getLeaderTableName(), LEAD_TTL));
+        this.releaseMigrationLeadStatement = session.prepare(format(RELEASE_LEAD_QUERY, getLeaderTableName()));
+        String tmpInstanceAddress;
+        try {
+            tmpInstanceAddress = InetAddress.getLocalHost().getHostAddress();
+        } catch (UnknownHostException e) {
+            LOGGER.warn("Could not find the local host address. Using default value.");
+            tmpInstanceAddress = "unknown";
+        }
+        this.instanceAddress = tmpInstanceAddress;
     }
 
     private void useKeyspace() {
-        LOGGER.info("Configuring the keyspace for the ongoing session.");
+        LOGGER.info("Changing keyspace of the session to '{}'", keyspaceName);
         session.execute("USE " + keyspaceName);
     }
 
-    private static String createTableName(String tablePrefix) {
+    private static String createTableName(String tablePrefix, String tableName) {
         if (tablePrefix == null || tablePrefix.isEmpty()) {
-            return SCHEMA_CF;
+            return tableName;
         }
-        return String.format("%s_%s", tablePrefix, SCHEMA_CF);
+        return String.format("%s_%s", tablePrefix, tableName);
     }
 
     private void createKeyspaceIfRequired() {
@@ -141,12 +192,18 @@ public class Database implements Closeable {
      * @return the current schema version
      */
     public int getVersion() {
-        ResultSet resultSet = session.execute(format(VERSION_QUERY, getTableName()));
+        SimpleStatement getVersionQuery = SimpleStatement.newInstance(format(VERSION_QUERY, getTableName()))
+                .setConsistencyLevel(this.consistencyLevel);
+        ResultSet resultSet = session.execute(getVersionQuery);
         Row result = resultSet.one();
         if (result == null) {
             return 0;
         }
         return result.getInt(0);
+    }
+
+    public String getLeaderTableName() {
+        return leaderTableName;
     }
 
     /**
@@ -174,15 +231,86 @@ public class Database implements Closeable {
 
     private boolean schemaTablesIsExisting() {
         Metadata metadata = session.getMetadata();
-        Optional<KeyspaceMetadata> keyspace = metadata.getKeyspace(keyspaceName);
-        return keyspace
-                .map(keyspaceMetadata -> keyspaceMetadata.getTable(getTableName())
-                        .isPresent())
+
+        return isTableExisting(metadata, getTableName())
+                && isTableExisting(metadata, getLeaderTableName());
+    }
+
+    private boolean isTableExisting(Metadata metadata, String tableName) {
+        return metadata
+                .getKeyspace(keyspaceName)
+                .map(keyspaceMetadata -> keyspaceMetadata.getTable(tableName).isPresent())
                 .orElse(false);
     }
 
+
     private void createSchemaTable() {
         session.execute(format(CREATE_MIGRATION_CF, getTableName()));
+        session.execute(format(CREATE_LEADER_CF, getLeaderTableName()));
+    }
+
+    /**
+     * Attempts to acquire the lead on a migration through a LightWeight
+     * Transaction.
+     *
+     * @param repositoryLatestVersion the latest version number in the migration repository
+     * @return if taking the lead succeeded.
+     */
+    boolean takeLeadOnMigrations(int repositoryLatestVersion) {
+        while (repositoryLatestVersion > getVersion()) {
+            try {
+                LOGGER.debug("Trying to take lead on schema migrations");
+                BoundStatement boundStatement = takeMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId,
+                        this.instanceAddress);
+                ResultSet lwtResult = session.execute(boundStatement);
+
+                if (lwtResult.wasApplied()) {
+                    LOGGER.debug("Took lead on schema migrations");
+                    tookLead = true;
+                    return true;
+                }
+
+                LOGGER.info("Schema migration is locked by another instance. Waiting for it to be released...");
+                waitForTakeLead();
+            } catch (InvalidQueryException e1) {
+                // A little redundant but necessary
+                LOGGER.info("All required tables do not exist yet, waiting for them to be created...");
+                waitForTakeLead();
+            }
+        }
+
+        return false;
+    }
+
+    private void waitForTakeLead() {
+        try {
+            Thread.sleep(TAKE_LEAD_WAIT_TIME);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Attempts to release the lead on schema migrations, if it was taken by the
+     * local process.
+     */
+    void removeLeadOnMigrations() {
+        if (tookLead) {
+            LOGGER.debug("Trying to release lead on schema migrations");
+
+            BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId);
+            ResultSet lwtResult = session.execute(boundStatement);
+
+            if (lwtResult.wasApplied()) {
+                LOGGER.debug("Released lead on schema migrations");
+                tookLead = false;
+                return;
+            }
+            // Another instance took the lead on migrations?
+            // Otherwise, TTL will do the trick
+            LOGGER.warn("Could not release lead on schema migrations");
+        }
     }
 
     /**

@@ -21,22 +21,36 @@ public class MigrationTask {
 
     private final Database database;
     private final MigrationRepository repository;
+    private final boolean withConsensus;
 
     /**
-     * Creates a migration task that uses the given database and repository.
+     * Creates a migration task that uses the given database and repository and no consensus
+     * protocol enabled.
      *
      * @param database   the database that should be migrated
      * @param repository the repository that contains the migration scripts
      */
     public MigrationTask(Database database, MigrationRepository repository) {
+        this(database, repository, false);
+    }
+
+    /**
+     * Creates a migration task that uses the given database and repository.
+     *
+     * @param database      the database that should be migrated
+     * @param repository    the repository that contains the migration scripts
+     * @param withConsensus if the migration should be handled by a single process at once, using LWT based leader election
+     */
+    public MigrationTask(Database database, MigrationRepository repository, boolean withConsensus) {
         this.database = notNull(database, "database");
         this.repository = notNull(repository, "repository");
+        this.withConsensus = withConsensus;
     }
 
     /**
      * Start the actual migration. Take the version of the database, get all required migrations and execute them or do
      * nothing if the DB is already up to date.
-     *
+     * <p>
      * At the end the underlying database instance is closed.
      *
      * @throws MigrationException if a migration fails
@@ -49,10 +63,26 @@ public class MigrationTask {
             return;
         }
 
-        List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
-        migrations.forEach(database::execute);
-        LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(), database.getVersion()));
-        database.close();
+        try {
+            if (!instanceHasLead()) {
+                return;
+            }
+            if (!databaseIsUpToDate()) {
+                List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
+                migrations.forEach(database::execute);
+                LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(),
+                        database.getVersion()));
+            }
+        } finally {
+            if (withConsensus) {
+                database.removeLeadOnMigrations();
+            }
+            database.close();
+        }
+    }
+
+    private boolean instanceHasLead() {
+        return !withConsensus || database.takeLeadOnMigrations(repository.getLatestVersion());
     }
 
     private boolean databaseIsUpToDate() {
