@@ -5,6 +5,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### v2.3.0
+* Pull Request 43: Adding leader election. If you are running a database with version >= 2.0 cassandra-migration will
+  now try to select a host that will perform the migration in case it runs on multiple hosts. (Thanks to Alexander Dejanovski)
+  
 ### v2.2.1
 * Pull Request 24: Provide a prefix for the database migration table
 * Pull Request 34: Documentation improvement
