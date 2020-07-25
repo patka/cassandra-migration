@@ -1,2 +1,2 @@
-CREATE KEYSPACE test_keyspace_multiline
-WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
+CREATE TABLE PERSON (id uuid primary key,
+ name varchar);
