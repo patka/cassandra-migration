@@ -46,7 +46,7 @@ public class CassandraMigrationAutoConfiguration {
         }
 
         MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cqlSession, properties.getKeyspaceName(), properties.getTablePrefix())
+        return new MigrationTask(new Database(cqlSession, properties.getKeyspaceName(), properties.getTablePrefix(), properties.getExecutionProfileName())
                 .setConsistencyLevel(properties.getConsistencyLevel()),
                 migrationRepository,
                 properties.isWithConsensus());

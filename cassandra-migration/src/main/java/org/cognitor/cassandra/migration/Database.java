@@ -12,6 +12,7 @@ import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -99,6 +100,7 @@ public class Database implements Closeable {
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
+    private final String executionProfileName;
     private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
     private final PreparedStatement takeMigrationLeadStatement;
@@ -110,7 +112,7 @@ public class Database implements Closeable {
     }
 
     public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
-        this(session, keyspace, null, tablePrefix);
+        this(session, keyspace, null, tablePrefix, null);
     }
 
     /**
@@ -124,15 +126,20 @@ public class Database implements Closeable {
     }
 
     public Database(CqlSession session, String keyspaceName, String tablePrefix) {
-        this(session, null, keyspaceName, tablePrefix);
+        this(session, null, keyspaceName, tablePrefix, null);
     }
 
-    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix) {
+    public Database(CqlSession session, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
+        this(session, null, keyspaceName, tablePrefix, executionProfileName);
+    }
+
+    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
         this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
         this.tableName = createTableName(tablePrefix, SCHEMA_CF);
         this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
+        this.executionProfileName = executionProfileName;
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
@@ -345,6 +352,7 @@ public class Database implements Closeable {
     private void executeStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = SimpleStatement.newInstance(statement)
+                    .setExecutionProfileName(executionProfileName)
                     .setConsistencyLevel(consistencyLevel);
             ResultSet resultSet = session.execute(simpleStatement);
             if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
