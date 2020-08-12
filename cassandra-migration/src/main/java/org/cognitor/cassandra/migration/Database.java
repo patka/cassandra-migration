@@ -100,7 +100,7 @@ public class Database implements Closeable {
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
-    private final String executionProfileName;
+    private  String executionProfileName;
     private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
     private final PreparedStatement takeMigrationLeadStatement;
@@ -112,7 +112,7 @@ public class Database implements Closeable {
     }
 
     public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
-        this(session, keyspace, null, tablePrefix, null);
+        this(session, keyspace, null, tablePrefix);
     }
 
     /**
@@ -126,20 +126,15 @@ public class Database implements Closeable {
     }
 
     public Database(CqlSession session, String keyspaceName, String tablePrefix) {
-        this(session, null, keyspaceName, tablePrefix, null);
+        this(session, null, keyspaceName, tablePrefix);
     }
 
-    public Database(CqlSession session, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
-        this(session, null, keyspaceName, tablePrefix, executionProfileName);
-    }
-
-    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
+    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix) {
         this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
         this.tableName = createTableName(tablePrefix, SCHEMA_CF);
         this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
-        this.executionProfileName = executionProfileName;
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
@@ -387,6 +382,17 @@ public class Database implements Closeable {
      */
     public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
+        return this;
+    }
+
+    /**
+     * Set the execution profile name to be used for schema upgrades
+     *
+     * @param executionProfileName
+     * @return the current database instance
+     */
+    public Database setExecutionProfileName(@Nullable String executionProfileName) {
+        this.executionProfileName = executionProfileName;
         return this;
     }
 }
