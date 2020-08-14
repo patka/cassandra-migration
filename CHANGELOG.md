@@ -5,11 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
-### v2.3.2
+### v2.4.0
 * [v4 only] Pull Request 52: Add ability to choose execution profile (by configuration parameter) (Thanks to rvgulinski)
 * Pull Request 49 & 50: Added ScriptFilter to dynamically validate or modify script content (Thanks to Alexander Dik) 
 
-### v.2.3.1
+### v2.3.1
 * Pull Request 46: Fixes issue 42. Multiline CQL statements are now supported. (Thanks to Jan Švajcr)
 
 ### v2.3.0
