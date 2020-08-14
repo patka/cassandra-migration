@@ -17,6 +17,7 @@ public class CassandraMigrationConfigurationProperties {
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
     private String keyspaceName;
     private String tablePrefix = "";
+    private String executionProfileName = null;
     private DefaultConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private Boolean withConsensus = false;
 
@@ -123,4 +124,23 @@ public class CassandraMigrationConfigurationProperties {
     public void setWithConsensus(Boolean withConsensus) {
         this.withConsensus = withConsensus;
     }
+
+    /**
+     * Sets execution profile name which should be used to execute schema migrations.
+     * If not set, default for <code>CqlSession</code> is used.
+     *
+     * @param executionProfileName to be used for migrations
+     */
+    public CassandraMigrationConfigurationProperties setExecutionProfileName(String executionProfileName) {
+        this.executionProfileName = executionProfileName;
+        return this;
+    }
+
+    /**
+     * @return execution profile name or null if default should be used to execute schema migrations.
+     */
+    public String getExecutionProfileName() {
+        return executionProfileName;
+    }
+
 }

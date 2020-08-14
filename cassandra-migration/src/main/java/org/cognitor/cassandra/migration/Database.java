@@ -12,6 +12,7 @@ import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -99,6 +100,7 @@ public class Database implements Closeable {
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
+    private  String executionProfileName;
     private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
     private final PreparedStatement takeMigrationLeadStatement;
@@ -345,6 +347,7 @@ public class Database implements Closeable {
     private void executeStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
             SimpleStatement simpleStatement = SimpleStatement.newInstance(statement)
+                    .setExecutionProfileName(executionProfileName)
                     .setConsistencyLevel(consistencyLevel);
             ResultSet resultSet = session.execute(simpleStatement);
             if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
@@ -379,6 +382,17 @@ public class Database implements Closeable {
      */
     public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
         this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
+        return this;
+    }
+
+    /**
+     * Set the execution profile name to be used for schema upgrades
+     *
+     * @param executionProfileName
+     * @return the current database instance
+     */
+    public Database setExecutionProfileName(@Nullable String executionProfileName) {
+        this.executionProfileName = executionProfileName;
         return this;
     }
 }
