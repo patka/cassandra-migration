@@ -161,9 +161,19 @@ the migration. You have to include the following dependency to make it work:
   </dependency>
 ```
 
+### Configuration
 In your properties file you will have four new properties that can be set:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
 * cassandra.migration.script-location Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations
 * cassandra.migration.table-prefix Prefix for the the migrations table name 
+
+### Leader election
+If multiple distributed processes are started the same time it's likely that migration will fail.
+Cause of the failure is race condition between the processes trying to execute schema migration.
+To avoid this scenario consensus flag was introduced in release 2.3.0:
+```yml
+cassandra.migration.with-consensus: true
+```
+Flag is disabled by default to support older Cassandra versions < 2.0
