@@ -4,8 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.cognitor.cassandra.migration.executors.DDLRecogniser.DDLRecogniserResult;
-import org.cognitor.cassandra.migration.executors.DDLRecogniser.DDLRecogniserResult.DDLType;
+import org.cognitor.cassandra.migration.executors.DDLRecogniser.CQLDescription;
+import org.cognitor.cassandra.migration.executors.DDLRecogniser.CQLDescription.DDLType;
 
 /**
  * Needs to be extended to return if is either CREATE, ALTER or DROP
@@ -13,17 +13,17 @@ import org.cognitor.cassandra.migration.executors.DDLRecogniser.DDLRecogniserRes
 public class DDLRecogniser {
     private List<DDLDetector> detectors = Arrays.asList(new KeyspaceDetector(), new TableDetector());
 
-    public DDLRecogniserResult evaluate(String cql) {
+    public CQLDescription evaluate(String cql) {
         for(DDLDetector detector : detectors){
-            DDLRecogniserResult result = detector.getResult(cql);
+            CQLDescription result = detector.getResult(cql);
             if(result.isAsyncDDL) {
                 return result;
             }
         }
-        return DDLRecogniserResult.nonAsyncDDL();
+        return CQLDescription.nonAsyncDDL();
     }
 
-    static class DDLRecogniserResult {
+    static class CQLDescription {
         public static enum DDLType {
             CREATE,
             ALTER,
@@ -37,12 +37,12 @@ public class DDLRecogniser {
         private String resourceName;
         private DDLType ddlType;
 
-        public static DDLRecogniserResult nonAsyncDDL() {
-            return new DDLRecogniserResult();
+        public static CQLDescription nonAsyncDDL() {
+            return new CQLDescription();
         }
 
-        public static DDLRecogniserResult asyncKeyspaceDDL(String keyspaceName, DDLType ddlType) {
-            DDLRecogniserResult result = new DDLRecogniserResult();
+        public static CQLDescription asyncKeyspaceDDL(String keyspaceName, DDLType ddlType) {
+            CQLDescription result = new CQLDescription();
             result.isAsyncDDL = true;
             result.isKeyspaceDDL = true;
             result.resourceName = keyspaceName;
@@ -50,8 +50,8 @@ public class DDLRecogniser {
             return result;
         }
 
-        public static DDLRecogniserResult asyncTableDDL(String keyspaceName, DDLType ddlType) {
-            DDLRecogniserResult result = new DDLRecogniserResult();
+        public static CQLDescription asyncTableDDL(String keyspaceName, DDLType ddlType) {
+            CQLDescription result = new CQLDescription();
             result.isAsyncDDL = true;
             result.isTableDDL = true;
             result.resourceName = keyspaceName;
@@ -88,7 +88,7 @@ public class DDLRecogniser {
 
 abstract class DDLDetector {
     Pattern pattern;
-    abstract DDLRecogniserResult getResult(String cql);
+    abstract CQLDescription getResult(String cql);
 }
 
 
@@ -103,13 +103,13 @@ class KeyspaceDetector extends DDLDetector {
     }
 
     @Override
-    DDLRecogniserResult getResult(String cql) {
+    CQLDescription getResult(String cql) {
         Matcher matcher = pattern.matcher(cql);
         if(!matcher.find()) {
-            return DDLRecogniserResult.nonAsyncDDL();
+            return CQLDescription.nonAsyncDDL();
         }
         DDLType ddlType = DDLType.valueOf(matcher.group(1).trim().toUpperCase());
-        return DDLRecogniserResult.asyncKeyspaceDDL(matcher.group(3).replaceAll("\"", ""), ddlType);
+        return CQLDescription.asyncKeyspaceDDL(matcher.group(3).replaceAll("\"", ""), ddlType);
     }
 }
 
@@ -125,12 +125,12 @@ class TableDetector extends DDLDetector {
     }
 
     @Override
-    DDLRecogniserResult getResult(String cql) {
+    CQLDescription getResult(String cql) {
         Matcher matcher = pattern.matcher(cql);
         if(!matcher.find()) {
-            return DDLRecogniserResult.nonAsyncDDL();
+            return CQLDescription.nonAsyncDDL();
         }
         DDLType ddlType = DDLType.valueOf(matcher.group(1).trim().toUpperCase());
-        return DDLRecogniserResult.asyncTableDDL(matcher.group(4).replaceAll("\"", ""), ddlType);
+        return CQLDescription.asyncTableDDL(matcher.group(4).replaceAll("\"", ""), ddlType);
     }
 }

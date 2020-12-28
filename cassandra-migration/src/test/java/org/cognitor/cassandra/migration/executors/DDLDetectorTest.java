@@ -1,12 +1,9 @@
 package org.cognitor.cassandra.migration.executors;
 
-import org.cognitor.cassandra.migration.executors.DDLRecogniser.DDLRecogniserResult;
-import org.cognitor.cassandra.migration.executors.DDLRecogniser.DDLRecogniserResult.DDLType;
-import org.cognitor.cassandra.migration.keyspace.Keyspace;
-import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
+import org.cognitor.cassandra.migration.executors.DDLRecogniser.CQLDescription;
+import org.cognitor.cassandra.migration.executors.DDLRecogniser.CQLDescription.DDLType;
 import org.junit.Test;
 
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -43,7 +40,7 @@ public class DDLDetectorTest {
     public void shouldDetectKeyspaceOperationAndReturnKeyspaceName() {
         for(String[] ddl : validKeyspaceDDLs){
             DDLRecogniser recogniser = new DDLRecogniser();
-            DDLRecogniserResult result = recogniser.evaluate(ddl[0]);
+            CQLDescription result = recogniser.evaluate(ddl[0]);
             assertTrue(result.isAsyncDDL());
             assertTrue(result.isKeyspaceDDL());
             assertEquals(ddl[1], result.getResourceName());
@@ -55,7 +52,7 @@ public class DDLDetectorTest {
     public void shouldDetectTableOperationAndReturnKeyspaceName() {
         for(String[] ddl : validTableDDLs){
             DDLRecogniser recogniser = new DDLRecogniser();
-            DDLRecogniserResult result = recogniser.evaluate(ddl[0]);
+            CQLDescription result = recogniser.evaluate(ddl[0]);
             assertTrue(result.isAsyncDDL());
             assertTrue(result.isTableDDL());
             assertEquals(ddl[1], result.getResourceName());
@@ -67,7 +64,7 @@ public class DDLDetectorTest {
     public void shouldDetectNonDDLStatements() {
         for(String statement : nonDDLStatements){
             DDLRecogniser recogniser = new DDLRecogniser();
-            DDLRecogniserResult result = recogniser.evaluate(statement);
+            CQLDescription result = recogniser.evaluate(statement);
             assertTrue(result.isNotAsyncDDL());
         }
     }
