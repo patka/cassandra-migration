@@ -140,13 +140,20 @@ table name. Just provide the prefix in the constructor of the Database or as a s
 The prefix will be separated by an underscore from the "schema_migration" string, e.g. with prefix "myApp" the table
 name would be "myApp_schema_migration". 
 
+## Version deprecation
+Please be aware that the version 2 of this library that uses the old version 3 Datastax driver will be deprecated by end
+of 2021. New features will mainly be implemented on the v4 version and only backported if requested. Bugfixes will still
+be applied. As this project is development only during spare time and I don't have the time to spend that I would like
+to, I have to prioritize my work. Besides, even an older installation of the database itself can be used with the newer
+driver so there is in general nothing preventing one from upgrading.
+
 ## Maven
 If you are using maven you can add cassandra-migration as a dependency to your project like this:
 ```xml
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.2.0</version>
+      <version>2.4.0_v4</version>
   </dependency>
 ```
 
@@ -157,7 +164,7 @@ the migration. You have to include the following dependency to make it work:
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-      <version>2.2.0</version>
+      <version>2.4.0_v4</version>
   </dependency>
 ```
 
