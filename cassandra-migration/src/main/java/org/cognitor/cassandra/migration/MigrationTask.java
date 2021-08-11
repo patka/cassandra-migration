@@ -24,6 +24,12 @@ public class MigrationTask {
     private final boolean withConsensus;
 
     /**
+     * This property decides whether or not, on a batch migration,
+     * if any of the scripts fail, should the migration continue without it or not
+     */
+    private boolean shouldFailGracefully = false;
+
+    /**
      * Creates a migration task that uses the given database and repository.
      *
      * @param database   the database that should be migrated
@@ -36,8 +42,8 @@ public class MigrationTask {
     /**
      * Creates a migration task that uses the given database and repository.
      *
-     * @param database the database that should be migrated
-     * @param repository the repository that contains the migration scripts
+     * @param database      the database that should be migrated
+     * @param repository    the repository that contains the migration scripts
      * @param withConsensus if the migration should be handled by a single process at once, using LWT based leader election
      */
     public MigrationTask(Database database, MigrationRepository repository, boolean withConsensus) {
@@ -49,7 +55,7 @@ public class MigrationTask {
     /**
      * Start the actual migration. Take the version of the database, get all required migrations and execute them or do
      * nothing if the DB is already up to date.
-     *
+     * <p>
      * At the end the underlying database instance is closed.
      *
      * @throws MigrationException if a migration fails
@@ -65,7 +71,13 @@ public class MigrationTask {
             if (!withConsensus || database.takeLeadOnMigrations(repository.getLatestVersion())) {
                 if (!databaseIsUpToDate()) {
                     List<DbMigration> migrations = repository.getMigrationsSinceVersion(database.getVersion());
-                    migrations.forEach(database::execute);
+                    migrations.forEach(migration -> {
+                        if (shouldFailGracefully()) {
+                            migrateWithHandler(migration);
+                        } else {
+                            database.execute(migration);
+                        }
+                    });
                     LOGGER.info(format("Migrated keyspace %s to version %d", database.getKeyspaceName(),
                             database.getVersion()));
                 }
@@ -78,7 +90,37 @@ public class MigrationTask {
         database.close();
     }
 
-    private boolean databaseIsUpToDate() {
+    protected void migrateWithHandler(DbMigration migration) {
+
+        try {
+            database.execute(migration);
+        } catch (MigrationException e) {
+            LOGGER.warn(format("Failed to migrate script %s. Reason: %s",
+                    migration.getScriptName(), e.getCause().getMessage()));
+        }
+    }
+
+    protected boolean databaseIsUpToDate() {
         return database.getVersion() >= repository.getLatestVersion();
+    }
+
+    public boolean shouldFailGracefully() {
+        return shouldFailGracefully;
+    }
+
+    public void setShouldFailGracefully(boolean shouldFailGracefully) {
+        this.shouldFailGracefully = shouldFailGracefully;
+    }
+
+    public Database getDatabase() {
+        return database;
+    }
+
+    public MigrationRepository getRepository() {
+        return repository;
+    }
+
+    public boolean isWithConsensus() {
+        return withConsensus;
     }
 }

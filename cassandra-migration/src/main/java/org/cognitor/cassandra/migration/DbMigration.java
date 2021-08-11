@@ -9,7 +9,7 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
  *
  * @author Patrick Kranz
  */
-class DbMigration {
+public class DbMigration {
     private final String migrationScript;
     private final String scriptName;
     private final int version;

@@ -253,4 +253,13 @@ public class DatabaseTest {
         MigrationTask migrationTask = new MigrationTask(database, repository);
         migrationTask.migrate();
     }
+
+    @Test
+    public void shoulRunBatchMigration() {
+        Database database = new Database(cassandra.getCluster(), CassandraJUnitRule.TEST_KEYSPACE);
+        MigrationRepository repository = new MigrationRepository("cassandra/migrationtest/batch");
+        MigrationTask migrationTask = new MigrationTask(database, repository);
+        migrationTask.setShouldFailGracefully(true);
+        migrationTask.migrate();
+    }
 }
