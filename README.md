@@ -29,9 +29,10 @@ In order to make sure that this session will not be used by your application, yo
 mark the application session as primary. 
 Here is an example for a programmatic configuration:
 ```
-@Bean(name = "cassandraMigrationCqlSession")
-public CqlSession cassandraMigrationCqlSession() {
-  // session creation code here
+@Bean
+@Qualifier(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
+public CqlSession cassandraMigrationCqlSession(CqlSessionBuilder cqlSessionBuilder) {
+    return cqlSessionBuilder.build();
 }
 
 @Bean
@@ -44,6 +45,29 @@ public CqlSession applicationCqlSession() {
 In order to be sure to use the correct name, there is a a public constant in 
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
 when declaring the session bean.
+
+### Reactive cassandra driver:
+There is no manually-defined CqlSession if you are using ReactiveCassandraConfiguration
+```
+@Configuration
+@RequiredArgsConstructor
+@EnableReactiveCassandraRepositories
+public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
+....
+}
+```
+Following trick could be used to mark existing CqlSession as primary while you still need secondary session for Cassandra Migration.
+```
+@Component
+public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor {
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        BeanDefinition bd = beanFactory.getBeanDefinition("cassandraSession");
+        bd.setPrimary(true);
+    }
+}
+```
 
 ### Testing in v4
 Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is
