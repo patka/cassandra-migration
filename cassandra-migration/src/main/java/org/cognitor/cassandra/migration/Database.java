@@ -5,10 +5,9 @@ import com.datastax.oss.driver.api.core.CqlSession;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.api.core.DriverException;
 import com.datastax.oss.driver.api.core.cql.*;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.datastax.oss.driver.api.core.servererrors.InvalidQueryException;
 import org.cognitor.cassandra.migration.cql.SimpleCQLLexer;
-import org.cognitor.cassandra.migration.executors.Executor;
-import org.cognitor.cassandra.migration.executors.ExecutorDetector;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,8 +99,12 @@ public class Database implements Closeable {
     private final String leaderTableName;
     private final String keyspaceName;
     private final Keyspace keyspace;
-    private Executor executor;
+    private final CqlSession session;
     private  String executionProfileName;
+    private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
+    private final PreparedStatement logMigrationStatement;
+    private final PreparedStatement takeMigrationLeadStatement;
+    private final PreparedStatement releaseMigrationLeadStatement;
     private boolean tookLead = false;
 
     public Database(CqlSession session, Keyspace keyspace) {
@@ -127,17 +130,17 @@ public class Database implements Closeable {
     }
 
     private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix) {
-        notNull(session, "session");
+        this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
         this.tableName = createTableName(tablePrefix, SCHEMA_CF);
         this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
-        executor = new ExecutorDetector(session).getExecutor();
-
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
-
+        this.logMigrationStatement = this.session.prepare(format(INSERT_MIGRATION, getTableName()));
+        this.takeMigrationLeadStatement = session.prepare(format(TAKE_LEAD_QUERY, getLeaderTableName(), LEAD_TTL));
+        this.releaseMigrationLeadStatement = session.prepare(format(RELEASE_LEAD_QUERY, getLeaderTableName()));
         String tmpInstanceAddress;
         try {
             tmpInstanceAddress = InetAddress.getLocalHost().getHostAddress();
@@ -150,7 +153,7 @@ public class Database implements Closeable {
 
     private void useKeyspace() {
         LOGGER.info("Changing keyspace of the session to '{}'", keyspaceName);
-        executor.execute("USE " + keyspaceName);
+        session.execute("USE " + keyspaceName);
     }
 
     private static String createTableName(String tablePrefix, String tableName) {
@@ -161,14 +164,18 @@ public class Database implements Closeable {
     }
 
     private void createKeyspaceIfRequired() {
-        if (keyspace == null || executor.keyspaceExists(keyspaceName)) {
+        if (keyspace == null || keyspaceExists()) {
             return;
         }
         try {
-            executor.execute(this.keyspace.getCqlStatement());
+            session.execute(this.keyspace.getCqlStatement());
         } catch (DriverException exception) {
             throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
         }
+    }
+
+    private boolean keyspaceExists() {
+        return session.getMetadata().getKeyspace(keyspaceName).isPresent();
     }
 
     /**
@@ -177,7 +184,7 @@ public class Database implements Closeable {
      * After calling this, this database instance can no longer be used.
      */
     public void close() {
-        executor.close();
+        this.session.close();
     }
 
     /**
@@ -187,7 +194,9 @@ public class Database implements Closeable {
      * @return the current schema version
      */
     public int getVersion() {
-        ResultSet resultSet = executor.execute(format(VERSION_QUERY, getTableName()));
+        SimpleStatement getVersionQuery = SimpleStatement.newInstance(format(VERSION_QUERY, getTableName()))
+                .setConsistencyLevel(this.consistencyLevel);
+        ResultSet resultSet = session.execute(getVersionQuery);
         Row result = resultSet.one();
         if (result == null) {
             return 0;
@@ -223,13 +232,23 @@ public class Database implements Closeable {
     }
 
     private boolean schemaTablesIsExisting() {
-        return executor.tableExists(keyspaceName, getTableName())
-                && executor.tableExists(keyspaceName, getLeaderTableName());
+        Metadata metadata = session.getMetadata();
+
+        return isTableExisting(metadata, getTableName())
+                && isTableExisting(metadata, getLeaderTableName());
     }
 
+    private boolean isTableExisting(Metadata metadata, String tableName) {
+        return metadata
+                .getKeyspace(keyspaceName)
+                .map(keyspaceMetadata -> keyspaceMetadata.getTable(tableName).isPresent())
+                .orElse(false);
+    }
+
+
     private void createSchemaTable() {
-        executor.execute(format(CREATE_MIGRATION_CF, getTableName()));
-        executor.execute(format(CREATE_LEADER_CF, getLeaderTableName()));
+        session.execute(format(CREATE_MIGRATION_CF, getTableName()));
+        session.execute(format(CREATE_LEADER_CF, getLeaderTableName()));
     }
 
     /**
@@ -243,9 +262,9 @@ public class Database implements Closeable {
         while (repositoryLatestVersion > getVersion()) {
             try {
                 LOGGER.debug("Trying to take lead on schema migrations");
-
-                ResultSet lwtResult = executor.execute(format(TAKE_LEAD_QUERY, getLeaderTableName(), LEAD_TTL), getKeyspaceName(), this.instanceId,
+                BoundStatement boundStatement = takeMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId,
                         this.instanceAddress);
+                ResultSet lwtResult = session.execute(boundStatement);
 
                 if (lwtResult.wasApplied()) {
                     LOGGER.debug("Took lead on schema migrations");
@@ -282,7 +301,8 @@ public class Database implements Closeable {
         if (tookLead) {
             LOGGER.debug("Trying to release lead on schema migrations");
 
-            ResultSet lwtResult = executor.execute(format(RELEASE_LEAD_QUERY, getLeaderTableName()), getKeyspaceName(), this.instanceId);
+            BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId);
+            ResultSet lwtResult = session.execute(boundStatement);
 
             if (lwtResult.wasApplied()) {
                 LOGGER.debug("Released lead on schema migrations");
@@ -326,8 +346,10 @@ public class Database implements Closeable {
 
     private void executeStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
-            ResultSet resultSet = executor.execute(statement, executionProfileName);
-
+            SimpleStatement simpleStatement = SimpleStatement.newInstance(statement)
+                    .setExecutionProfileName(executionProfileName)
+                    .setConsistencyLevel(consistencyLevel);
+            ResultSet resultSet = session.execute(simpleStatement);
             if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
                 throw new MigrationException("Schema agreement could not be reached. " +
                         "You might consider increasing 'maxSchemaAgreementWaitSeconds'.",
@@ -343,12 +365,13 @@ public class Database implements Closeable {
      * @param wasSuccessful indicates if the migration was successful or not
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
-        executor.execute(format(INSERT_MIGRATION, getTableName()), wasSuccessful, migration.getVersion(),
+        BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), Instant.now());
+        session.execute(boundStatement);
     }
 
     public ConsistencyLevel getConsistencyLevel() {
-        return executor.getConsistencyLevel();
+        return consistencyLevel;
     }
 
     /**
@@ -358,7 +381,7 @@ public class Database implements Closeable {
      * @return the current database instance
      */
     public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.executor.setConsistencyLevel(notNull(consistencyLevel, "consistencyLevel"));
+        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
         return this;
     }
 
@@ -371,25 +394,5 @@ public class Database implements Closeable {
     public Database setExecutionProfileName(@Nullable String executionProfileName) {
         this.executionProfileName = executionProfileName;
         return this;
-    }
-
-    /**
-     * Can be a {@link org.cognitor.cassandra.migration.executors.SimpleExecutor} which only execute cqls
-     * against the CqlSession or a {@link org.cognitor.cassandra.migration.executors.AwsMcsExecutor} which
-     * wait for ddl completion (which are asycronous in aws).
-     * {@link org.cognitor.cassandra.migration.executors.AwsMcsExecutor} is auto selected when running
-     *  in AWS MCS.
-     */
-    public Executor getExecutor() {
-        return executor;
-    }
-
-    /**
-     * Allow custom implementation of cql executors.
-     * {@link org.cognitor.cassandra.migration.executors.AwsMcsExecutor} is auto selected when running
-     * in AWS MCS.It waits for ddl completion because they are executed asynchronously on AWS.
-     */
-    public void setExecutor(Executor executor) {
-        this.executor = executor;
     }
 }
