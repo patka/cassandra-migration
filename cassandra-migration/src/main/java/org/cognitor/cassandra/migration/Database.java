@@ -112,7 +112,7 @@ public class Database implements Closeable {
     }
 
     public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
-        this(session, keyspace, null, tablePrefix);
+        this(session, keyspace, null, tablePrefix, null);
     }
 
     /**
@@ -129,12 +129,17 @@ public class Database implements Closeable {
         this(session, null, keyspaceName, tablePrefix);
     }
 
-    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix) {
+    public Database(CqlSession session, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
+        this(session, null, keyspaceName, tablePrefix, executionProfileName);
+    }
+
+    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
         this.session = notNull(session, "session");
         this.keyspace = keyspace;
         this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
         this.tableName = createTableName(tablePrefix, SCHEMA_CF);
         this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
+        this.executionProfileName = executionProfileName;
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
@@ -247,8 +252,14 @@ public class Database implements Closeable {
 
 
     private void createSchemaTable() {
-        session.execute(format(CREATE_MIGRATION_CF, getTableName()));
-        session.execute(format(CREATE_LEADER_CF, getLeaderTableName()));
+        SimpleStatement createMigrationQuery = SimpleStatement.newInstance(format(CREATE_MIGRATION_CF, getTableName()))
+                .setExecutionProfileName(this.executionProfileName)
+                .setConsistencyLevel(this.consistencyLevel);
+        session.execute(createMigrationQuery);
+        SimpleStatement createLeaderQuery = SimpleStatement.newInstance(format(CREATE_LEADER_CF, getLeaderTableName()))
+                .setExecutionProfileName(this.executionProfileName)
+                .setConsistencyLevel(this.consistencyLevel);
+        session.execute(createLeaderQuery);
     }
 
     /**
