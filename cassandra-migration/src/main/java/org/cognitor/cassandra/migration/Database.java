@@ -136,6 +136,7 @@ public class Database implements Closeable {
         }
         this.keyspace = configuration.getKeyspace();
         this.keyspaceName = keyspace.getKeyspaceName();
+        this.executionProfileName = configuration.getExecutionProfile();
         this.tableName = createTableName(configuration.getTablePrefix(), SCHEMA_CF);
         this.leaderTableName = createTableName(configuration.getTablePrefix(), SCHEMA_LEADER_CF);
         createKeyspaceIfRequired();
@@ -171,7 +172,7 @@ public class Database implements Closeable {
             return;
         }
         try {
-            session.execute(this.keyspace.getCqlStatement());
+            executeStatement(this.keyspace.getCqlStatement());
         } catch (DriverException exception) {
             throw new MigrationException(format("Unable to create keyspace %s.", keyspaceName), exception);
         }
@@ -197,9 +198,7 @@ public class Database implements Closeable {
      * @return the current schema version
      */
     public int getVersion() {
-        SimpleStatement getVersionQuery = SimpleStatement.newInstance(format(VERSION_QUERY, getTableName()))
-                .setConsistencyLevel(this.consistencyLevel);
-        ResultSet resultSet = session.execute(getVersionQuery);
+        ResultSet resultSet = executeStatement(format(VERSION_QUERY, getTableName()));
         Row result = resultSet.one();
         if (result == null) {
             return 0;
@@ -250,14 +249,8 @@ public class Database implements Closeable {
 
 
     private void createSchemaTable() {
-        SimpleStatement createMigrationQuery = SimpleStatement.newInstance(format(CREATE_MIGRATION_CF, getTableName()))
-                .setExecutionProfileName(this.executionProfileName)
-                .setConsistencyLevel(this.consistencyLevel);
-        session.execute(createMigrationQuery);
-        SimpleStatement createLeaderQuery = SimpleStatement.newInstance(format(CREATE_LEADER_CF, getLeaderTableName()))
-                .setExecutionProfileName(this.executionProfileName)
-                .setConsistencyLevel(this.consistencyLevel);
-        session.execute(createLeaderQuery);
+        executeStatement(format(CREATE_MIGRATION_CF, getTableName()));
+        executeStatement(format(CREATE_LEADER_CF, getLeaderTableName()));
     }
 
     /**
@@ -273,7 +266,7 @@ public class Database implements Closeable {
                 LOGGER.debug("Trying to take lead on schema migrations");
                 BoundStatement boundStatement = takeMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId,
                         this.instanceAddress);
-                ResultSet lwtResult = session.execute(boundStatement);
+                ResultSet lwtResult = executeStatement(boundStatement);
 
                 if (lwtResult.wasApplied()) {
                     LOGGER.debug("Took lead on schema migrations");
@@ -311,7 +304,7 @@ public class Database implements Closeable {
             LOGGER.debug("Trying to release lead on schema migrations");
 
             BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId);
-            ResultSet lwtResult = session.execute(boundStatement);
+            ResultSet lwtResult = executeStatement(boundStatement);
 
             if (lwtResult.wasApplied()) {
                 LOGGER.debug("Released lead on schema migrations");
@@ -341,7 +334,7 @@ public class Database implements Closeable {
             for (String statement : lexer.getCqlQueries()) {
                 statement = statement.trim();
                 lastStatement = statement;
-                executeStatement(statement, migration);
+                executeMigrationStatement(statement, migration);
             }
             logMigration(migration, true);
             LOGGER.debug(format("Successfully applied migration %s to version %d",
@@ -353,18 +346,25 @@ public class Database implements Closeable {
         }
     }
 
-    private void executeStatement(String statement, DbMigration migration) {
+    private void executeMigrationStatement(String statement, DbMigration migration) {
         if (!statement.isEmpty()) {
-            SimpleStatement simpleStatement = SimpleStatement.newInstance(statement)
-                    .setExecutionProfileName(executionProfileName)
-                    .setConsistencyLevel(consistencyLevel);
-            ResultSet resultSet = session.execute(simpleStatement);
+            ResultSet resultSet = executeStatement(statement);
             if (!resultSet.getExecutionInfo().isSchemaInAgreement()) {
                 throw new MigrationException("Schema agreement could not be reached. " +
                         "You might consider increasing 'maxSchemaAgreementWaitSeconds'.",
                         migration.getScriptName());
             }
         }
+    }
+
+    private ResultSet executeStatement(String statement) throws DriverException {
+        return executeStatement(SimpleStatement.newInstance(statement));
+    }
+
+    private ResultSet executeStatement(Statement<?> statement) throws DriverException {
+        return session.execute(statement
+                .setExecutionProfileName(executionProfileName)
+                .setConsistencyLevel(consistencyLevel));
     }
 
     /**
@@ -376,7 +376,7 @@ public class Database implements Closeable {
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), Instant.now());
-        session.execute(boundStatement);
+        executeStatement(boundStatement);
     }
 
     public ConsistencyLevel getConsistencyLevel() {
