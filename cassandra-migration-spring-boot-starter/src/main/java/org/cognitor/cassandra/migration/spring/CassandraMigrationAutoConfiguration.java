@@ -2,6 +2,7 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.CqlSession;
 import org.cognitor.cassandra.migration.Database;
+import org.cognitor.cassandra.migration.MigrationConfiguration;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
@@ -46,7 +47,11 @@ public class CassandraMigrationAutoConfiguration {
         }
 
         MigrationRepository migrationRepository = createRepository();
-        return new MigrationTask(new Database(cqlSession, properties.getKeyspaceName(), properties.getTablePrefix(), properties.getExecutionProfileName())
+        MigrationConfiguration configuration = new MigrationConfiguration()
+                .withKeyspaceName(properties.getKeyspaceName())
+                .withTablePrefix(properties.getTablePrefix())
+                .withExecutionProfile(properties.getExecutionProfileName());
+        return new MigrationTask(new Database(cqlSession, configuration)
                 .setConsistencyLevel(properties.getConsistencyLevel()),
                 migrationRepository,
                 properties.isWithConsensus());

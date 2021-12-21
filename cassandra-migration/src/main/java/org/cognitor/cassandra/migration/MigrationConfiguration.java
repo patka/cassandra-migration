@@ -8,6 +8,7 @@ public class MigrationConfiguration {
     public final String EMPTY_TABLE_PREFIX = "";
     private String tablePrefix = EMPTY_TABLE_PREFIX;
     private Keyspace keyspace;
+    private String executionProfile;
 
     public MigrationConfiguration withKeyspaceName(String keyspaceName) {
         this.keyspace = new Keyspace(keyspaceName);
@@ -27,12 +28,21 @@ public class MigrationConfiguration {
         return this;
     }
 
+    public MigrationConfiguration withExecutionProfile(String executionProfile) {
+        this.executionProfile = executionProfile;
+        return this;
+    }
+
     public String getTablePrefix() {
         return tablePrefix;
     }
 
     public Keyspace getKeyspace() {
         return keyspace;
+    }
+
+    public String getExecutionProfile() {
+        return this.executionProfile;
     }
 
     public boolean isValid() {
@@ -42,8 +52,9 @@ public class MigrationConfiguration {
     @Override
     public String toString() {
         return "MigrationConfiguration {" +
-                " [OPTIONAL] tablePrefix='" + tablePrefix + '\'' +
-                ",[REQUIRED] keyspace=" + keyspace +
+                " [REQUIRED] keyspace=" + keyspace +
+                ",[OPTIONAL] tablePrefix='" + tablePrefix + '\'' +
+                ",[OPTIONAL] executionProfile='" + executionProfile + '\'' +
                 '}';
     }
 }
