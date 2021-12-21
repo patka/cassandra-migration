@@ -250,8 +250,14 @@ public class Database implements Closeable {
 
 
     private void createSchemaTable() {
-        session.execute(format(CREATE_MIGRATION_CF, getTableName()));
-        session.execute(format(CREATE_LEADER_CF, getLeaderTableName()));
+        SimpleStatement createMigrationQuery = SimpleStatement.newInstance(format(CREATE_MIGRATION_CF, getTableName()))
+                .setExecutionProfileName(this.executionProfileName)
+                .setConsistencyLevel(this.consistencyLevel);
+        session.execute(createMigrationQuery);
+        SimpleStatement createLeaderQuery = SimpleStatement.newInstance(format(CREATE_LEADER_CF, getLeaderTableName()))
+                .setExecutionProfileName(this.executionProfileName)
+                .setConsistencyLevel(this.consistencyLevel);
+        session.execute(createLeaderQuery);
     }
 
     /**
@@ -389,9 +395,10 @@ public class Database implements Closeable {
     }
 
     /**
-     * Set the execution profile name to be used for schema upgrades
+     * Set the execution profile name to be used for schema upgrades. This profile has to match an existing
+     * profile defined in <code>application.conf</code> for the Cassandra driver.
      *
-     * @param executionProfileName
+     * @param executionProfileName the name of the profile to be used during the execution of migrations
      * @return the current database instance
      */
     public Database setExecutionProfileName(@Nullable String executionProfileName) {
