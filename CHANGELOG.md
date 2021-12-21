@@ -3,6 +3,10 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+* Pull Request 61: Updating README to add details about spring-data-cassandra
+* Updated dependencies, most important one is Spring-Boot from 1.5.21_RELEASE to 2.6.1. As the spring dependencies are marked
+  as provided, it should not have any effect on the applications using this library
+* Introduction of Configuration class so that no new constructors will be required when a new configuration setting is introduced.
 
 ## Released
 ### v2.4.0
