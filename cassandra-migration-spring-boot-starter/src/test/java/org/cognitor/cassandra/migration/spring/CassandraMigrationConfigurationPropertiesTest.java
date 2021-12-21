@@ -2,12 +2,12 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.junit.Test;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.springframework.boot.test.util.EnvironmentTestUtils.addEnvironment;
 
 /**
  * @author Patrick Kranz
@@ -18,12 +18,14 @@ public class CassandraMigrationConfigurationPropertiesTest {
     public void shouldPopulatePropertiesWhenPropertiesFileGiven() {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        addEnvironment(context, "cassandra.migration.script-location:cassandra/migrationpath");
-        addEnvironment(context, "cassandra.migration.keyspace-name:test_keyspace");
-        addEnvironment(context, "cassandra.migration.strategy:IGNORE_DUPLICATES");
-        addEnvironment(context, "cassandra.migration.consistency-level:all");
-        addEnvironment(context, "cassandra.migration.table-prefix:prefix");
-        addEnvironment(context, "cassandra.migration.with-consensus:true");
+        TestPropertyValues testValues = TestPropertyValues.of(
+                "cassandra.migration.script-location:cassandra/migrationpath",
+                "cassandra.migration.keyspace-name:test_keyspace",
+                "cassandra.migration.strategy:IGNORE_DUPLICATES",
+                "cassandra.migration.consistency-level:all",
+                "cassandra.migration.table-prefix:prefix",
+                "cassandra.migration.with-consensus:true");
+        testValues.applyTo(context);
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =

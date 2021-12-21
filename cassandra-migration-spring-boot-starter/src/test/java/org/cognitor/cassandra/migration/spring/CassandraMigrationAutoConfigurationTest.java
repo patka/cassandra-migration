@@ -11,6 +11,7 @@ import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +24,6 @@ import static org.cognitor.cassandra.migration.spring.CassandraMigrationAutoConf
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.springframework.boot.test.util.EnvironmentTestUtils.addEnvironment;
 
 /**
  * @author Patrick Kranz
@@ -51,7 +51,8 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        addEnvironment(context, "cassandra.migration.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
+        testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
         // WHEN
@@ -73,8 +74,9 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        addEnvironment(context, "cassandra.migration.keyspace-name:" + KEYSPACE);
-        addEnvironment(context, "cassandra.migration.table-prefix:test");
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE)
+                .and("cassandra.migration.table-prefix:test");
+        testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
 

@@ -23,6 +23,7 @@
         <dependency>
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-core</artifactId>
+            <version>4.13.0</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -44,7 +45,7 @@
         <dependency>
             <groupId>org.ow2.asm</groupId>
             <artifactId>asm</artifactId>
-            <version>5.0.4</version>
+            <version>9.2</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
