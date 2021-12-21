@@ -20,7 +20,7 @@
     </description>
 
     <properties>
-        <spring.boot.version>1.5.21.RELEASE</spring.boot.version>
+        <spring.boot.version>2.6.1</spring.boot.version>
     </properties>
 
     <dependencies>
@@ -32,10 +32,7 @@
         <dependency>
             <groupId>com.datastax.oss</groupId>
             <artifactId>java-driver-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
+            <version>4.13.0</version>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -64,7 +61,7 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-test</artifactId>
-            <version>5.0.8.RELEASE</version>
+            <version>5.3.13</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -75,12 +72,12 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>1.10.19</version>
+            <version>4.1.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.hamcrest</groupId>
-            <artifactId>hamcrest-library</artifactId>
+            <artifactId>hamcrest</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>

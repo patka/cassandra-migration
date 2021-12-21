@@ -17,7 +17,6 @@ import java.io.Closeable;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.Instant;
-import java.util.Optional;
 import java.util.UUID;
 
 import static java.lang.String.format;
@@ -108,11 +107,11 @@ public class Database implements Closeable {
     private boolean tookLead = false;
 
     public Database(CqlSession session, Keyspace keyspace) {
-        this(session, keyspace, "");
+        this(session, new MigrationConfiguration().withKeyspace(keyspace));
     }
 
     public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
-        this(session, keyspace, null, tablePrefix, null);
+        this(session, new MigrationConfiguration().withKeyspace(keyspace).withTablePrefix(tablePrefix));
     }
 
     /**
@@ -122,24 +121,23 @@ public class Database implements Closeable {
      * @param keyspaceName the keyspace name that will be managed by this instance
      */
     public Database(CqlSession session, String keyspaceName) {
-        this(session, keyspaceName, "");
+        this(session, new MigrationConfiguration().withKeyspaceName(keyspaceName));
     }
 
     public Database(CqlSession session, String keyspaceName, String tablePrefix) {
-        this(session, null, keyspaceName, tablePrefix);
+        this(session, new MigrationConfiguration().withKeyspaceName(keyspaceName).withTablePrefix(tablePrefix));
     }
 
-    public Database(CqlSession session, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
-        this(session, null, keyspaceName, tablePrefix, executionProfileName);
-    }
-
-    private Database(CqlSession session, Keyspace keyspace, String keyspaceName, String tablePrefix, @Nullable String executionProfileName) {
+    public Database(CqlSession session, MigrationConfiguration configuration) {
         this.session = notNull(session, "session");
-        this.keyspace = keyspace;
-        this.keyspaceName = Optional.ofNullable(keyspace).map(Keyspace::getKeyspaceName).orElse(keyspaceName);
-        this.tableName = createTableName(tablePrefix, SCHEMA_CF);
-        this.leaderTableName = createTableName(tablePrefix, SCHEMA_LEADER_CF);
-        this.executionProfileName = executionProfileName;
+        if (!configuration.isValid()) {
+            throw new IllegalArgumentException("The provided configuration is invalid. Please check if all required values are" +
+                    " available. Current configuration is: " + System.lineSeparator() + configuration);
+        }
+        this.keyspace = configuration.getKeyspace();
+        this.keyspaceName = keyspace.getKeyspaceName();
+        this.tableName = createTableName(configuration.getTablePrefix(), SCHEMA_CF);
+        this.leaderTableName = createTableName(configuration.getTablePrefix(), SCHEMA_LEADER_CF);
         createKeyspaceIfRequired();
         useKeyspace();
         ensureSchemaTable();
@@ -397,9 +395,10 @@ public class Database implements Closeable {
     }
 
     /**
-     * Set the execution profile name to be used for schema upgrades
+     * Set the execution profile name to be used for schema upgrades. This profile has to match an existing
+     * profile defined in <code>application.conf</code> for the Cassandra driver.
      *
-     * @param executionProfileName
+     * @param executionProfileName the name of the profile to be used during the execution of migrations
      * @return the current database instance
      */
     public Database setExecutionProfileName(@Nullable String executionProfileName) {

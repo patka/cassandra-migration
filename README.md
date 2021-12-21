@@ -29,9 +29,10 @@ In order to make sure that this session will not be used by your application, yo
 mark the application session as primary. 
 Here is an example for a programmatic configuration:
 ```
-@Bean(name = "cassandraMigrationCqlSession")
+@Bean
+@Qualifier(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
 public CqlSession cassandraMigrationCqlSession() {
-  // session creation code here
+    // session creation code here
 }
 
 @Bean
@@ -41,9 +42,33 @@ public CqlSession applicationCqlSession() {
 }
 ```
 
-In order to be sure to use the correct name, there is a a public constant in 
+In order to be sure to use the correct name, there is a public constant in 
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
-when declaring the session bean.
+when declaring the session bean as shown in the example.
+
+### Reactive Cassandra Driver
+If you are using spring-data-cassandra or the reactive counterpart, you will not have easy access
+to the ```CqlSession``` as it is created inside the ```CqlSessionFactoryBean``` and that class maintains
+the ```CqlSession``` as a singleton.
+
+As per my understanding the easiest solution would be to manually create another session in the manner
+shown above so that ```cassandra-migration``` can pick it up. If you encounter any problems with the
+wrong ```CqlSession``` ending up wired to your beans, you can mark the ```CqlSession``` created by Spring
+as primary by using a ```BeanFactoryPostProcessor```:
+
+```
+import org.springframework.data.cassandra.config.DefaultCqlBeanNames;
+
+@Component
+public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor {
+
+    @Override
+    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
+        BeanDefinition bd = beanFactory.getBeanDefinition(DefaultCqlBeanNames.SESSION);
+        bd.setPrimary(true);
+    }
+}
+```
 
 ### Testing in v4
 Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is

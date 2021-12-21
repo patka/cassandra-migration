@@ -6,7 +6,7 @@ import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Patrick Kranz
