@@ -9,7 +9,6 @@ import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.junit.After;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
@@ -61,7 +60,7 @@ public class CassandraMigrationAutoConfigurationTest {
         // THEN
         CqlSession session = createSession();
         List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
-        Assert.assertThat(rows.size(), Matchers.is(equalTo(1)));
+        assertThat(rows.size(), Matchers.is(equalTo(1)));
         Row migration = rows.get(0);
         assertThat(migration.getBoolean("applied_successful"), is(true));
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
