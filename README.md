@@ -30,8 +30,8 @@ Here is an example for a programmatic configuration:
 ```
 @Bean
 @Qualifier(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
-public CqlSession cassandraMigrationCqlSession(CqlSessionBuilder cqlSessionBuilder) {
-    return cqlSessionBuilder.build();
+public CqlSession cassandraMigrationCqlSession() {
+    // session creation code here
 }
 
 @Bean
@@ -41,28 +41,29 @@ public CqlSession applicationCqlSession() {
 }
 ```
 
-In order to be sure to use the correct name, there is a a public constant in 
+In order to be sure to use the correct name, there is a public constant in 
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
-when declaring the session bean.
+when declaring the session bean as shown in the example.
 
-### Reactive cassandra driver:
-There is no manually-defined CqlSession if you are using ReactiveCassandraConfiguration
+### Reactive Cassandra Driver
+If you are using spring-data-cassandra or the reactive counterpart, you will not have easy access
+to the ```CqlSession``` as it is created inside the ```CqlSessionFactoryBean``` and that class maintains
+the ```CqlSession``` as a singleton.
+
+As per my understanding the easiest solution would be to manually create another session in the manner
+shown above so that ```cassandra-migration``` can pick it up. If you encounter any problems with the
+wrong ```CqlSession``` ending up wired to your beans, you can mark the ```CqlSession``` created by Spring
+as primary by using a ```BeanFactoryPostProcessor```:
+
 ```
-@Configuration
-@RequiredArgsConstructor
-@EnableReactiveCassandraRepositories
-public class CassandraConfig extends AbstractReactiveCassandraConfiguration {
-....
-}
-```
-Following trick could be used to mark existing CqlSession as primary while you still need secondary session for Cassandra Migration.
-```
+import org.springframework.data.cassandra.config.DefaultCqlBeanNames;
+
 @Component
 public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor {
 
     @Override
     public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        BeanDefinition bd = beanFactory.getBeanDefinition("cassandraSession");
+        BeanDefinition bd = beanFactory.getBeanDefinition(DefaultCqlBeanNames.SESSION);
         bd.setPrimary(true);
     }
 }
