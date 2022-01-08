@@ -3,6 +3,10 @@ This file will contain all important changes to the project.
 This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Unreleased
+
+## Released
+### v2.5.0
+* starting with 2.5.0 support for drivers before v4 ran out.
 * Pull Request 61: Updating README to add details about spring-data-cassandra
 * Updated dependencies, most important one is Spring-Boot from 1.5.21_RELEASE to 2.6.1. As the spring dependencies are marked
   as provided, it should not have any effect on the applications using this library
@@ -12,7 +16,6 @@ This project adheres to [Semantic Versioning](http://semver.org/).
   related to creating tables required to manage migrations are executed with consistency level Quorum while
   the migrations themselves can be set to be executed with a different level than Quorum although that remains the default.
 
-## Released
 ### v2.4.0
 * [v4 only] Pull Request 52: Add ability to choose execution profile (by configuration parameter) (Thanks to rvgulinski)
 * Pull Request 49 & 50: Added ScriptFilter to dynamically validate or modify script content (Thanks to Alexander Dik) 
