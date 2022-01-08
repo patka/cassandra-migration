@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.*;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -24,7 +24,8 @@ public class CassandraMigrationConfigurationPropertiesTest {
                 "cassandra.migration.strategy:IGNORE_DUPLICATES",
                 "cassandra.migration.consistency-level:all",
                 "cassandra.migration.table-prefix:prefix",
-                "cassandra.migration.with-consensus:true");
+                "cassandra.migration.with-consensus:true",
+                "cassandra.migration.execution-profile-name:testProfile");
         testValues.applyTo(context);
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -36,6 +37,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getConsistencyLevel(), is(equalTo(DefaultConsistencyLevel.ALL)));
         assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
         assertThat(properties.isWithConsensus(), is(true));
+        assertThat(properties.getExecutionProfileName(), is(equalTo("testProfile")));
     }
 
     @Test
@@ -51,5 +53,6 @@ public class CassandraMigrationConfigurationPropertiesTest {
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
         assertThat(properties.getTablePrefix(), is(equalTo("")));
         assertThat(properties.isWithConsensus(), is(false));
+        assertThat(properties.getExecutionProfileName(), is(nullValue()));
     }
 }

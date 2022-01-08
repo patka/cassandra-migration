@@ -7,6 +7,10 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 * Updated dependencies, most important one is Spring-Boot from 1.5.21_RELEASE to 2.6.1. As the spring dependencies are marked
   as provided, it should not have any effect on the applications using this library
 * Introduction of Configuration class so that no new constructors will be required when a new configuration setting is introduced.
+  Old constructors have been marked deprecated in that context. As they all map to the new constructor internally anyway.
+* Pull Request 62 & 63: Making the use of the profile and the consistency level more consistent. All statements
+  related to creating tables required to manage migrations are executed with consistency level Quorum while
+  the migrations themselves can be set to be executed with a different level than Quorum although that remains the default.
 
 ## Released
 ### v2.4.0

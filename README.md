@@ -168,6 +168,16 @@ table name. Just provide the prefix in the constructor of the Database or as a s
 The prefix will be separated by an underscore from the "schema_migration" string, e.g. with prefix "myApp" the table
 name would be "myApp_schema_migration". 
 
+## Execution profiles
+You can configure Cassandra-Migration to make use of execution profiles for the migration scripts. This can be very
+useful in case the migration scripts can take a long time to run and you do not want to change your application timeouts
+just for the migration of the schema. In that case you can define a separate profile with different timeouts that can be
+used just for migrations. Have a look on the [Datastax documentation](https://docs.datastax.com/en/developer/java-driver/4.6/manual/core/configuration/)
+on how to define such a profile.
+Once defined, you can set the execution profile name in the `MigrationConfiguration` and it will be used during migration.
+`execution-profile-name` is also available in the spring auto configuration and canbe used in the `application.properties`
+file.
+
 ## Version deprecation
 Please be aware that the version 2 of this library that uses the old version 3 Datastax driver will be deprecated by end
 of 2021. New features will mainly be implemented on the v4 version and only backported if requested. Bugfixes will still

@@ -2,7 +2,6 @@ package org.cognitor.cassandra.migration;
 
 import com.datastax.oss.driver.api.core.ConsistencyLevel;
 import com.datastax.oss.driver.api.core.CqlSession;
-import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import com.datastax.oss.driver.api.core.DriverException;
 import com.datastax.oss.driver.api.core.cql.*;
 import com.datastax.oss.driver.api.core.metadata.Metadata;
@@ -99,17 +98,28 @@ public class Database implements Closeable {
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
-    private  String executionProfileName;
-    private ConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
+    private final ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
     private final PreparedStatement logMigrationStatement;
     private final PreparedStatement takeMigrationLeadStatement;
     private final PreparedStatement releaseMigrationLeadStatement;
+    private String executionProfileName;
+    private ConsistencyLevel migrationConsistencyLevel = ConsistencyLevel.QUORUM;
     private boolean tookLead = false;
 
+    /**
+     * Deprecated in favour of <code>Database(CqlSession, MigrationConfiguration)</code>. This constructor
+     * will be removed in future releases.
+     */
+    @Deprecated
     public Database(CqlSession session, Keyspace keyspace) {
         this(session, new MigrationConfiguration().withKeyspace(keyspace));
     }
 
+    /**
+     * Deprecated in favour of <code>Database(CqlSession, MigrationConfiguration)</code>. This constructor
+     * will be removed in future releases.
+     */
+    @Deprecated
     public Database(CqlSession session, Keyspace keyspace, String tablePrefix) {
         this(session, new MigrationConfiguration().withKeyspace(keyspace).withTablePrefix(tablePrefix));
     }
@@ -117,17 +127,38 @@ public class Database implements Closeable {
     /**
      * Creates a new instance of the database.
      *
+     * Deprecated in favour of <code>Database(CqlSession, MigrationConfiguration)</code>. This constructor
+     * will be removed in future releases.
+     *
      * @param session      the session that is connected to a cassandra instance
      * @param keyspaceName the keyspace name that will be managed by this instance
      */
+    @Deprecated
     public Database(CqlSession session, String keyspaceName) {
         this(session, new MigrationConfiguration().withKeyspaceName(keyspaceName));
     }
 
+    /**
+     * Deprecated in favour of <code>Database(CqlSession, MigrationConfiguration)</code>. This constructor
+     * will be removed in future releases.
+     */
+    @Deprecated
     public Database(CqlSession session, String keyspaceName, String tablePrefix) {
         this(session, new MigrationConfiguration().withKeyspaceName(keyspaceName).withTablePrefix(tablePrefix));
     }
 
+    /**
+     * Create a new instance of the database by using the provided <code>CqlSession</code> and
+     * {@link MigrationConfiguration}. Be aware that the CqlSession might be required to change
+     * the keyspace so usually you want this CqlSession to be different from the CqlSession
+     * that will be used inside the application.
+     *
+     * The constructor will take care of creating all required tables inside the database to manage
+     * versioning inside Cassandra.
+     *
+     * @param session the cql session that is connected to the cassandra instance. Must not be null.
+     * @param configuration the configuration to be used. Must not be null and must be valid.
+     */
     public Database(CqlSession session, MigrationConfiguration configuration) {
         this.session = notNull(session, "session");
         if (!configuration.isValid()) {
@@ -255,7 +286,7 @@ public class Database implements Closeable {
 
     /**
      * Attempts to acquire the lead on a migration through a LightWeight
-     * Transaction.
+     * Transaction. For this statement the consistency level of <code>QUORUM</code> is used.
      *
      * @param repositoryLatestVersion the latest version number in the migration repository
      * @return if taking the lead succeeded.
@@ -266,7 +297,7 @@ public class Database implements Closeable {
                 LOGGER.debug("Trying to take lead on schema migrations");
                 BoundStatement boundStatement = takeMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId,
                         this.instanceAddress);
-                ResultSet lwtResult = executeStatement(boundStatement);
+                ResultSet lwtResult = executeStatement(boundStatement, this.consistencyLevel);
 
                 if (lwtResult.wasApplied()) {
                     LOGGER.debug("Took lead on schema migrations");
@@ -304,7 +335,7 @@ public class Database implements Closeable {
             LOGGER.debug("Trying to release lead on schema migrations");
 
             BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId);
-            ResultSet lwtResult = executeStatement(boundStatement);
+            ResultSet lwtResult = executeStatement(boundStatement, this.consistencyLevel);
 
             if (lwtResult.wasApplied()) {
                 LOGGER.debug("Released lead on schema migrations");
@@ -358,10 +389,10 @@ public class Database implements Closeable {
     }
 
     private ResultSet executeStatement(String statement) throws DriverException {
-        return executeStatement(SimpleStatement.newInstance(statement));
+        return executeStatement(SimpleStatement.newInstance(statement), this.migrationConsistencyLevel);
     }
 
-    private ResultSet executeStatement(Statement<?> statement) throws DriverException {
+    private ResultSet executeStatement(Statement<?> statement, ConsistencyLevel consistencyLevel) throws DriverException {
         return session.execute(statement
                 .setExecutionProfileName(executionProfileName)
                 .setConsistencyLevel(consistencyLevel));
@@ -376,27 +407,39 @@ public class Database implements Closeable {
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
                 migration.getScriptName(), migration.getMigrationScript(), Instant.now());
-        executeStatement(boundStatement);
+        executeStatement(boundStatement, this.migrationConsistencyLevel);
     }
 
+    /**
+     * Retrieve the consistency level used for migration execution.
+     *
+     * @return the consistency level that is used for database migrations. Never null.
+     */
     public ConsistencyLevel getConsistencyLevel() {
-        return consistencyLevel;
+        return migrationConsistencyLevel;
     }
 
     /**
      * Set the consistency level that should be used for schema upgrades. Default is <code>ConsistencyLevel.QUORUM</code>
      *
-     * @param consistencyLevel the consistency level to be used. Must not be null.
+     * This method only changes the consistency level for the migration scripts and the version logging that results
+     * of these scripts. For everything that happens during initialization (e.g. schema table creation)
+     * the <code>ConsistencyLevel.QUORUM</code> is used.
+     *
+     * @param migrationConsistencyLevel the consistency level to be used. Must not be null.
      * @return the current database instance
      */
-    public Database setConsistencyLevel(ConsistencyLevel consistencyLevel) {
-        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
+    public Database setConsistencyLevel(ConsistencyLevel migrationConsistencyLevel) {
+        this.migrationConsistencyLevel = notNull(migrationConsistencyLevel, "migrationConsistencyLevel");
         return this;
     }
 
     /**
      * Set the execution profile name to be used for schema upgrades. This profile has to match an existing
-     * profile defined in <code>application.conf</code> for the Cassandra driver.
+     * profile defined in <code>application.conf</code> for the Cassandra driver. This should be set
+     * in the <code>MigrationConfiguration</code> as the change here only applies to the migration scripts
+     * themselves. If you want your execution profile to be used for creation of the migration table, you need
+     * to set it in <code>MigrationConfiguration</code> before creating an instance of <code>Database</code>.
      *
      * @param executionProfileName the name of the profile to be used during the execution of migrations
      * @return the current database instance

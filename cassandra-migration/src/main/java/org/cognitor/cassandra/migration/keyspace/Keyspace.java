@@ -15,6 +15,13 @@ public class Keyspace {
     private boolean durableWrites;
     private ReplicationStrategy replicationStrategy;
 
+    /**
+     * This creates a new instance of a keyspace using the provided keyspace name. It by default
+     * uses a {@link SimpleStrategy} for replication and sets durable writes to <code>true</code>.
+     * These default values can be overwritten by the provided methods.
+     *
+     * @param keyspaceName the name of the keyspace to be used.
+     */
     public Keyspace(String keyspaceName) {
         this.keyspaceName = notNullOrEmpty(keyspaceName, "keyspaceName");
         this.replicationStrategy = new SimpleStrategy();
