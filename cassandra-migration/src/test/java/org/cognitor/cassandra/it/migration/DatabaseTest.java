@@ -7,6 +7,8 @@ import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.github.nosan.embedded.cassandra.Cassandra;
+import com.github.nosan.embedded.cassandra.CassandraBuilder;
 import org.cognitor.cassandra.migration.Database;
 import org.cognitor.cassandra.migration.MigrationException;
 import org.cognitor.cassandra.migration.MigrationRepository;
@@ -14,8 +16,12 @@ import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -39,8 +45,29 @@ public class DatabaseTest {
     private static final String NETWORK_KEYSPACE = "network_keyspace";
     private static final String NEW_KEYSPACE = "new_keyspace";
     private static final String CASSANDRA_HOST = "127.0.0.1";
+    private static final int CASSANDRA_PORT = 9042;
     private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
     private CqlSession session;
+    private static Cassandra cassandra;
+    private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseTest.class);
+
+    @BeforeClass
+    public static void initDb() {
+        cassandra = new CassandraBuilder()
+                .version("3.11.12")
+                .addConfigProperty("enable_user_defined_functions", true)
+                .build();
+        cassandra.start();
+        LOGGER.warn("cassandra started successfully");
+    }
+
+    @AfterClass
+    public static void stopDb() {
+        if (null != cassandra) {
+            cassandra.stop();
+        }
+        LOGGER.warn("cassandra stopped successfully");
+    }
 
     @Before
     public void before() {
@@ -67,7 +94,7 @@ public class DatabaseTest {
                 .withBoolean(DefaultDriverOption.REQUEST_WARN_IF_SET_KEYSPACE, false)
                 .build();
         return new CqlSessionBuilder()
-                .addContactPoint(new InetSocketAddress(CASSANDRA_HOST, 9042))
+                .addContactPoint(new InetSocketAddress(CASSANDRA_HOST, CASSANDRA_PORT))
                 .withConfigLoader(loader)
                 .withLocalDatacenter("datacenter1")
                 .build();
@@ -148,7 +175,7 @@ public class DatabaseTest {
                             new MigrationRepository("cassandra/migrationtest/successful"),
                             true));
         }
-        List<Callable<Boolean>> migrations = migrationTasks.stream().map(task -> databaseMigrationTask(task))
+        List<Callable<Boolean>> migrations = migrationTasks.stream().map(this::databaseMigrationTask)
                 .collect(Collectors.toList());
 
         // Executing the same migration concurrently with different threads

@@ -70,18 +70,19 @@ public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor 
 }
 ```
 
-### Testing in v4
-Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is
-not yet released with support for driver version 4, the only option at the moment to run the integration tests
-is to run them against a running instance on localhost. In all integration tests there is a static
-field declared that is called `CASSANDRA_HOST`. You can modify that if you cassandra instance runs on 
-a different host.
-As the tests also test the creation of user defined functions you need to change the configuration parameter
-`enabled_user_defined_functions` from false to true in the cassandra.yaml config file.
+### Testing
+This library uses [embedded-cassandra](https://github.com/nosan/embedded-cassandra) to test migration scripts with a running Cassandra instance.
+We can change easily the embedded Cassandra version used by updating the version in tests :
+```
+cassandra = new CassandraBuilder()
+        .version("3.11.12")
+        .build();
+```
+Since Cassandra dropped support on Windows environment after [4.0-beta3 (CASSANDRA-16171)](https://issues.apache.org/jira/browse/CASSANDRA-16171), the only solution for testing on Cassandra 4+ on Windows will be to use [TestContainers](https://www.testcontainers.org/modules/databases/cassandra/), but it requires a Docker installation.
 
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
-cluster object all you need to do is integrate the next lines in your projects startup code:
+cluster object all you need to do is integrate the next lines in your project startup code:
 
 ```
 Database database = new Database(cluster, "nameOfMyKeyspace");
@@ -175,7 +176,7 @@ just for the migration of the schema. In that case you can define a separate pro
 used just for migrations. Have a look on the [Datastax documentation](https://docs.datastax.com/en/developer/java-driver/4.6/manual/core/configuration/)
 on how to define such a profile.
 Once defined, you can set the execution profile name in the `MigrationConfiguration` and it will be used during migration.
-`execution-profile-name` is also available in the spring auto configuration and canbe used in the `application.properties`
+`execution-profile-name` is also available in the spring auto configuration and can be used in the `application.properties`
 file.
 
 ## Version deprecation
@@ -206,9 +207,11 @@ the migration. You have to include the following dependency to make it work:
   </dependency>
 ```
 
-In your properties file you will have four new properties that can be set:
+In your properties file you will have new properties that can be set:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
-* cassandra.migration.script-location Overrides the default script location
+* cassandra.migration.script-locations Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations
-* cassandra.migration.table-prefix Prefix for the the migrations table name 
+* cassandra.migration.table-prefix Prefix for the migrations table name
+* cassandra.migration.execution-profile-name the name for the execution profile
+* cassandra.migration.with-consensus to prevent concurrent schema updates.

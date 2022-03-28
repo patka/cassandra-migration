@@ -17,7 +17,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Objects;
 import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -103,7 +105,20 @@ public class MigrationRepository {
      *                            the repository contains duplicate script versions
      */
     public MigrationRepository(String scriptPath) {
-        this(scriptPath, new FailOnDuplicatesCollector());
+        this(Collections.singletonList(scriptPath), new FailOnDuplicatesCollector());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPaths and the default
+     * {@link ScriptCollector} that will throw an exception in case
+     * there are duplicate versions inside the repository.
+     *
+     * @param scriptPaths paths on the classpath to the migration scripts. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path or
+     *                            the repository contains duplicate script versions
+     */
+    public MigrationRepository(List<String> scriptPaths) {
+        this(scriptPaths, new FailOnDuplicatesCollector());
     }
 
     /**
@@ -115,7 +130,19 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector) {
-        this(scriptPath, scriptCollector, new ScannerRegistry());
+        this(Collections.singletonList(scriptPath), scriptCollector, new ScannerRegistry());
+    }
+
+    /**
+     * Creates a new repository with the given scriptPaths and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPaths paths on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(List<String> scriptPaths, ScriptCollector scriptCollector) {
+        this(scriptPaths, scriptCollector, new ScannerRegistry());
     }
 
     /**
@@ -128,11 +155,36 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(String scriptPath, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
+        this(Collections.singletonList(scriptPath), scriptCollector, scannerRegistry);
+    }
+
+    /**
+     * Creates a new repository with the given scriptPaths and the given
+     * {@link ScriptCollector}.
+     *
+     * @param scriptPaths the paths on the classpath to the migration scripts. Must not be null.
+     * @param scriptCollector the collection strategy used to collect the scripts. Must not be null.
+     * @param scannerRegistry A ScannerRegistry to create LocationScanner instances. Must not be null.
+     * @throws MigrationException in case there is a problem reading the scripts in the path.
+     */
+    public MigrationRepository(List<String> scriptPaths, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
+        if (null == scriptPaths || scriptPaths.isEmpty()) {
+            throw new IllegalArgumentException("Argument scriptPaths must not be null or empty.");
+        }
+
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
-            migrationScripts = scanForScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
+            for (String scriptPath : scriptPaths) {
+                scanAndCollectScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
+            }
+
+            List<ScriptFile> scripts = new ArrayList<>(scriptCollector.getScriptFiles());
+            LOGGER.info(format("Found %d migration scripts", scripts.size()));
+
+            sort(scripts);
+            migrationScripts = scripts;
         } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }
@@ -175,12 +227,12 @@ public class MigrationRepository {
         return migrationScripts.get(migrationScripts.size() - 1).getVersion();
     }
 
-    private List<ScriptFile> scanForScripts(String scriptPath) throws IOException, URISyntaxException {
+    private void scanAndCollectScripts(String scriptPath) throws IOException, URISyntaxException {
         LOGGER.debug("Scanning for cql migration scripts in " + scriptPath);
         Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
         while (scriptResources.hasMoreElements()) {
             URI script = scriptResources.nextElement().toURI();
-            LOGGER.debug("Potential script folder: {}", script.toString());
+            LOGGER.debug("Potential script folder: {}", script);
             if (!scannerRegistry.supports(script.getScheme())) {
                 LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.", script.getScheme());
                 continue;
@@ -196,10 +248,6 @@ public class MigrationRepository {
                 }
             }
         }
-        List<ScriptFile> scripts = new ArrayList<>(scriptCollector.getScriptFiles());
-        LOGGER.info(format("Found %d migration scripts", scripts.size()));
-        sort(scripts);
-        return scripts;
     }
 
     private static int extractScriptVersion(String scriptName) {
@@ -261,7 +309,7 @@ public class MigrationRepository {
 
     private String readResourceFileAsString(String resourceName, ClassLoader classLoader) throws IOException {
         return new BufferedReader(new InputStreamReader(
-                classLoader.getResourceAsStream(resourceName),
+                Objects.requireNonNull(classLoader.getResourceAsStream(resourceName)),
                 SCRIPT_ENCODING
         )).lines()
                 .filter(line -> !isLineComment(line))
