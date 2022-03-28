@@ -28,15 +28,16 @@ import java.util.Set;
  * <a href="https://github.com/backjo">backjo</a>. Thanks a lot :)
  */
 public class SpringBootLocationScanner implements LocationScanner {
-    private PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
+    private final PathMatchingResourcePatternResolver resourcePatternResolver = new PathMatchingResourcePatternResolver();
 
-        @Override
-        public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
-            Resource[] resources = resourcePatternResolver.getResources(location + "*.cql");
+    @Override
+    public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
+        Resource[] resources = resourcePatternResolver.getResources(location + "*.cql");
 
-            Set<String> resourcePaths = new HashSet<>();
-            for (Resource resource : resources) {
-                resourcePaths.add(location + resource.getFilename());
-            }
-            return resourcePaths;
-        }}
+        Set<String> resourcePaths = new HashSet<>();
+        for (Resource resource : resources) {
+            resourcePaths.add(location + resource.getFilename());
+        }
+        return resourcePaths;
+    }
+}

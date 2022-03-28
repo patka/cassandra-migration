@@ -3,6 +3,10 @@ package org.cognitor.cassandra.migration.spring;
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.util.CollectionUtils;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -14,7 +18,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "cassandra.migration")
 public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
-    private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
+    private List<String> scriptLocations = Collections.singletonList(MigrationRepository.DEFAULT_SCRIPT_PATH);
     private String keyspaceName;
     private String tablePrefix = "";
     private String executionProfileName = null;
@@ -22,10 +26,10 @@ public class CassandraMigrationConfigurationProperties {
     private Boolean withConsensus = false;
 
     /**
-     * @return The location of the migration scripts. Never null.
+     * @return The locations of the migration scripts. Never null.
      */
-    public String getScriptLocation() {
-        return scriptLocation;
+    public List<String> getScriptLocations() {
+        return scriptLocations;
     }
 
     /**
@@ -33,14 +37,14 @@ public class CassandraMigrationConfigurationProperties {
      * The default is <code>MigrationRepository.DEFAULT_SCRIPT_PATH</code> which
      * points to <code>cassandra/migration</code> on the classpath.
      *
-     * @param scriptLocation the location of the migration scripts. Must not be null.
+     * @param scriptLocations the locations of the migration scripts. Must not be null nor empty.
      * @throws IllegalArgumentException when scriptLocation is null or empty
      */
-    public void setScriptLocation(String scriptLocation) {
-        if (scriptLocation == null || scriptLocation.isEmpty()) {
-            throw new IllegalArgumentException("Script location cannot be unset.");
+    public void setScriptLocations(List<String> scriptLocations) {
+        if (CollectionUtils.isEmpty(scriptLocations)) {
+            throw new IllegalArgumentException("Script locations cannot be unset.");
         }
-        this.scriptLocation = scriptLocation;
+        this.scriptLocations = scriptLocations;
     }
 
     /**

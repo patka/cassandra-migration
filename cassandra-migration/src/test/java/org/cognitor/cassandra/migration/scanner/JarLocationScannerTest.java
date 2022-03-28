@@ -1,6 +1,8 @@
 package org.cognitor.cassandra.migration.scanner;
 
 import org.junit.AfterClass;
+import org.junit.Assume;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -15,6 +17,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
+import static io.netty.util.internal.PlatformDependent.isWindows;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.core.Is.is;
@@ -27,6 +30,11 @@ public class JarLocationScannerTest {
 
     private static File jarFile;
     private static URI jarUri;
+
+    @Before
+    public void windowsOnly() {
+        Assume.assumeFalse(isWindows());
+    }
 
     @BeforeClass
     public static void beforeClass() throws IOException, URISyntaxException {

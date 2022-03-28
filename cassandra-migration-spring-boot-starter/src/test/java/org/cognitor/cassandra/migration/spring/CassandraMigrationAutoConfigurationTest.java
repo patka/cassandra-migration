@@ -5,12 +5,13 @@ import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
+import com.github.nosan.embedded.cassandra.Cassandra;
+import com.github.nosan.embedded.cassandra.CassandraBuilder;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -31,10 +32,30 @@ import static org.hamcrest.Matchers.*;
 public class CassandraMigrationAutoConfigurationTest {
     private static final String KEYSPACE = "test_keyspace";
 
+    private static Cassandra cassandra;
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMigrationAutoConfigurationTest.class);
+
+    @BeforeClass
+    public static void initDb() {
+        cassandra = new CassandraBuilder()
+                .version("3.11.12")
+                .build();
+        cassandra.start();
+        LOGGER.warn("cassandra started successfully");
+    }
+
+    @AfterClass
+    public static void stopDb() {
+        if (null != cassandra) {
+            cassandra.stop();
+        }
+        LOGGER.warn("cassandra stopped successfully");
+    }
+
     @Before
     public void before() {
         CqlSession session = createSession();
-        session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
+        session.execute("CREATE KEYSPACE " + KEYSPACE + " WITH REPLICATION = " +
                 "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
         session.close();
     }
@@ -47,11 +68,12 @@ public class CassandraMigrationAutoConfigurationTest {
     }
 
     @Test
-    public void shouldMigrateDatabaseWhenClusterGiven() {
+    public void shouldMigrateDatabaseWhenClusterGivenWithMultipleLocations() {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.script-locations:cassandra/common,cassandra/dev");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -61,12 +83,18 @@ public class CassandraMigrationAutoConfigurationTest {
         // THEN
         CqlSession session = createSession();
         List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
-        assertThat(rows.size(), Matchers.is(equalTo(1)));
+        assertThat(rows.size(), is(equalTo(2)));
         Row migration = rows.get(0);
         assertThat(migration.getBoolean("applied_successful"), is(true));
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
         assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
         assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        migration = rows.get(1);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("100_populate_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("INSERT INTO"));
+        session.close();
     }
 
     @Test
@@ -92,6 +120,7 @@ public class CassandraMigrationAutoConfigurationTest {
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
         assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
         assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
     }
 
     private CqlSession createSession() {
