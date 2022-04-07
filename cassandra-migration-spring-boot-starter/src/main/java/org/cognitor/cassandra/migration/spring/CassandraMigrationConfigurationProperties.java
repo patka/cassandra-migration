@@ -116,6 +116,19 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
+     * Sets the name of the keyspace that should be migrated. This
+     * setting is required in order for the migration to work.
+     * Sets the keyspace properties. This setting is required in order for the migration to work.
+     * @deprecated Use {@link #setKeyspace(KeyspaceProperties)} instead.
+     *
+     * @param keyspaceName the name of the keyspace to be migrated
+     */
+    @Deprecated
+    public void setKeyspaceName(String keyspaceName) {
+        this.keyspace.setKeyspaceName(keyspaceName);
+    }
+
+    /**
      * @return the keyspace properties. Can be null if it was not set
      *          before.
      */
@@ -128,7 +141,7 @@ public class CassandraMigrationConfigurationProperties {
      *
      * @param keyspace the keyspace properties
      */
-    public void setKeyspaceName(KeyspaceProperties keyspace) {
+    public void setKeyspace(KeyspaceProperties keyspace) {
         this.keyspace = keyspace;
     }
 

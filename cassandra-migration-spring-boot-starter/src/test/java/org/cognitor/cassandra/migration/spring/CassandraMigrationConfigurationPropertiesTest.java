@@ -18,6 +18,33 @@ import static org.hamcrest.core.Is.is;
 public class CassandraMigrationConfigurationPropertiesTest {
 
     @Test
+    public void shouldPopulatePropertiesWhenPropertiesGivenDeprecatedKeyspace() {
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+        TestPropertyValues testValues = TestPropertyValues.of(
+                "cassandra.migration.script-location:cassandra/migrationpath",
+                "cassandra.migration.keyspace-name:test_keyspace",
+                "cassandra.migration.strategy:IGNORE_DUPLICATES",
+                "cassandra.migration.consistency-level:all",
+                "cassandra.migration.table-prefix:prefix",
+                "cassandra.migration.with-consensus:true",
+                "cassandra.migration.execution-profile-name:testProfile");
+        testValues.applyTo(context);
+        context.register(CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        CassandraMigrationConfigurationProperties properties =
+                context.getBean(CassandraMigrationConfigurationProperties.class);
+        assertThat(properties.getKeyspace().getKeyspaceName(), is(equalTo("test_keyspace")));
+        assertThat(properties.getKeyspace().getReplicationStrategy(), is(KeyspaceReplicationStrategy.SIMPLE));
+        assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
+        assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
+        assertThat(properties.getConsistencyLevel(), is(equalTo(DefaultConsistencyLevel.ALL)));
+        assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
+        assertThat(properties.isWithConsensus(), is(true));
+        assertThat(properties.getExecutionProfileName(), is(equalTo("testProfile")));
+    }
+
+    @Test
     public void shouldPopulatePropertiesWhenPropertiesGiven() {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
