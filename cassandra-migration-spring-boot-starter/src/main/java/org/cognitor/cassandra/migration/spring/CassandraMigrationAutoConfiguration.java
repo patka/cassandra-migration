@@ -7,6 +7,10 @@ import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
+import org.cognitor.cassandra.migration.keyspace.Keyspace;
+import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
+import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
+import org.cognitor.cassandra.migration.keyspace.SimpleStrategy;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +23,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.util.CollectionUtils;
 
 /**
  * @author Patrick Kranz
@@ -29,6 +34,7 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnClass(CqlSession.class)
 public class CassandraMigrationAutoConfiguration {
     public static final String CQL_SESSION_BEAN_NAME = "cassandraMigrationCqlSession";
+    public static final String MIGRATION_TASK_BEAN_NAME = "migrationTask";
     private final CassandraMigrationConfigurationProperties properties;
 
     @Autowired
@@ -36,25 +42,44 @@ public class CassandraMigrationAutoConfiguration {
         this.properties = properties;
     }
 
-
-    @Bean(initMethod = "migrate")
+    @Bean(name = MIGRATION_TASK_BEAN_NAME, initMethod = "migrate")
     @ConditionalOnBean(value = CqlSession.class)
     @ConditionalOnMissingBean(MigrationTask.class)
     public MigrationTask migrationTask(@Qualifier(CQL_SESSION_BEAN_NAME) CqlSession cqlSession) {
-        if (!properties.hasKeyspaceName()) {
-            throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
+        if (!properties.getKeyspace().hasKeyspaceName()) {
+            throw new IllegalStateException("Please specify ['cassandra.migration.keyspace.keyspace-name'] in" +
                     " order to migrate your database");
         }
 
         MigrationRepository migrationRepository = createRepository();
-        MigrationConfiguration configuration = new MigrationConfiguration()
-                .withKeyspaceName(properties.getKeyspaceName())
-                .withTablePrefix(properties.getTablePrefix())
-                .withExecutionProfile(properties.getExecutionProfileName());
+        MigrationConfiguration configuration = createConfiguration();
         return new MigrationTask(new Database(cqlSession, configuration)
                 .setConsistencyLevel(properties.getConsistencyLevel()),
                 migrationRepository,
                 properties.isWithConsensus());
+    }
+
+    private MigrationConfiguration createConfiguration() {
+        String keyspaceName = properties.getKeyspace().getKeyspaceName();
+
+        ReplicationStrategy replicationStrategy = new SimpleStrategy();
+        if (properties.getKeyspace().getReplicationStrategy() == KeyspaceReplicationStrategy.NETWORK) {
+            if (CollectionUtils.isEmpty(properties.getKeyspace().getReplications())) {
+                throw new IllegalStateException("Please specify ['cassandra.migration.keyspace.replications']" +
+                        " when using NETWORK strategy in order to migrate your database");
+            }
+            NetworkStrategy networkStrategy = new NetworkStrategy();
+            properties.getKeyspace().getReplications().forEach(replication ->
+                    networkStrategy.with(replication.getDatacenter(), replication.getReplicationFactor())
+            );
+
+            replicationStrategy = networkStrategy;
+        }
+
+        return new MigrationConfiguration()
+                .withKeyspace(new Keyspace(keyspaceName).with(replicationStrategy))
+                .withTablePrefix(properties.getTablePrefix())
+                .withExecutionProfile(properties.getExecutionProfileName());
     }
 
     private MigrationRepository createRepository() {

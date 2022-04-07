@@ -28,7 +28,7 @@ supposed to be used with this library. You can do this by adding the name to the
 In order to make sure that this session will not be used by your application, you can
 mark the application session as primary. 
 Here is an example for a programmatic configuration:
-```
+```java
 @Bean
 @Qualifier(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
 public CqlSession cassandraMigrationCqlSession() {
@@ -46,27 +46,23 @@ In order to be sure to use the correct name, there is a public constant in
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
 when declaring the session bean as shown in the example.
 
-### Reactive Cassandra Driver
-If you are using spring-data-cassandra or the reactive counterpart, you will not have easy access
-to the ```CqlSession``` as it is created inside the ```CqlSessionFactoryBean``` and that class maintains
-the ```CqlSession``` as a singleton.
+### Spring Data Cassandra
+If you are using spring-data-cassandra or the reactive counterpart, providing the CqlSession named `CQL_SESSION_BEAN_NAME` to be used by this library
+will bypass the spring data session as it is annotated by [`@ConditionalOnMissingBean`](https://github.com/spring-projects/spring-boot/blob/fdb1010cbc75517f511d4ab82de7d8f0ee058849/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/cassandra/CassandraAutoConfiguration.java#L74)
+The easiest solution is to provide both CqlSession and mark the one used by spring-data as `@Primary` :
 
-As per my understanding the easiest solution would be to manually create another session in the manner
-shown above so that ```cassandra-migration``` can pick it up. If you encounter any problems with the
-wrong ```CqlSession``` ending up wired to your beans, you can mark the ```CqlSession``` created by Spring
-as primary by using a ```BeanFactoryPostProcessor```:
+```java
+@Bean(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
+public CqlSession cassandraMigrationCqlSession() {
+    // migration session creation code here
+}
 
-```
-import org.springframework.data.cassandra.config.DefaultCqlBeanNames;
-
-@Component
-public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor {
-
-    @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        BeanDefinition bd = beanFactory.getBeanDefinition(DefaultCqlBeanNames.SESSION);
-        bd.setPrimary(true);
-    }
+@Bean(DefaultCqlBeanNames.SESSION)
+@Primary
+// ensure that the keyspace is created if needed before initializing spring-data session
+@DependsOn(CassandraMigrationAutoConfiguration.MIGRATION_TASK_BEAN_NAME)
+public CqlSession cassandraSession(CqlSessionBuilder cqlSessionBuilder) {
+    return cqlSessionBuilder.build();
 }
 ```
 

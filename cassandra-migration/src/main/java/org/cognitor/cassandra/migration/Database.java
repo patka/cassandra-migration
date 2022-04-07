@@ -172,7 +172,7 @@ public class Database implements Closeable {
         this.leaderTableName = createTableName(configuration.getTablePrefix(), SCHEMA_LEADER_CF);
         createKeyspaceIfRequired();
         useKeyspace();
-        ensureSchemaTable();
+        ensureSchemaTables();
         this.logMigrationStatement = this.session.prepare(format(INSERT_MIGRATION, getTableName()));
         this.takeMigrationLeadStatement = session.prepare(format(TAKE_LEAD_QUERY, getLeaderTableName(), LEAD_TTL));
         this.releaseMigrationLeadStatement = session.prepare(format(RELEASE_LEAD_QUERY, getLeaderTableName()));
@@ -199,7 +199,7 @@ public class Database implements Closeable {
     }
 
     private void createKeyspaceIfRequired() {
-        if (keyspace == null || keyspaceExists()) {
+        if (keyspaceExists()) {
             return;
         }
         try {
@@ -255,13 +255,13 @@ public class Database implements Closeable {
     }
 
     /**
-     * Makes sure the schema migration table exists. If it is not available it will be created.
+     * Makes sure the schema migration tables exist. If they are not available they will be created.
      */
-    private void ensureSchemaTable() {
+    private void ensureSchemaTables() {
         if (schemaTablesIsExisting()) {
             return;
         }
-        createSchemaTable();
+        createSchemaTables();
     }
 
     private boolean schemaTablesIsExisting() {
@@ -279,7 +279,7 @@ public class Database implements Closeable {
     }
 
 
-    private void createSchemaTable() {
+    private void createSchemaTables() {
         executeStatement(format(CREATE_MIGRATION_CF, getTableName()));
         executeStatement(format(CREATE_LEADER_CF, getLeaderTableName()));
     }

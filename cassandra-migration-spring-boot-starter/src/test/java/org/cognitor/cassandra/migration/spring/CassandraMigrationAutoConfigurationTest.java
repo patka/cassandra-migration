@@ -5,12 +5,12 @@ import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
+import com.datastax.oss.driver.api.core.metadata.Metadata;
+import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.*;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -30,28 +30,43 @@ import static org.hamcrest.Matchers.*;
  */
 public class CassandraMigrationAutoConfigurationTest {
     private static final String KEYSPACE = "test_keyspace";
+    private static CqlSession session;
 
-    @Before
-    public void before() {
-        CqlSession session = createSession();
-        session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
-                "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
-        session.close();
+    @BeforeClass
+    public static void beforeClass() {
+        session = createSession();
+        dropKeyspaceIfExists();
     }
 
     @After
     public void after() {
-        CqlSession session = createSession();
-        session.execute("DROP KEYSPACE IF EXISTS " + KEYSPACE + ";");
+        dropKeyspaceIfExists();
+    }
+
+    @AfterClass
+    public static void afterClass() {
+        dropKeyspaceIfExists();
         session.close();
     }
 
+    private static void createKeyspace() {
+        session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
+                "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
+    }
+
+    private static void dropKeyspaceIfExists() {
+        session.execute("DROP KEYSPACE IF EXISTS " + KEYSPACE + ";");
+    }
+
     @Test
-    public void shouldMigrateDatabaseWhenClusterGiven() {
+    public void shouldMigrateDatabaseWhenClusterGivenWithoutAutoKeyspaceCreation() {
+        // CREATE KEYSPACE MANUALLY
+        createKeyspace();
+
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE);
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -67,14 +82,18 @@ public class CassandraMigrationAutoConfigurationTest {
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
         assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
         assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
     }
 
     @Test
-    public void shouldMigrateDatabaseWhenClusterGivenWithPrefix() {
+    public void shouldMigrateDatabaseWhenClusterGivenWithPrefixWithoutAutoKeyspaceCreation() {
+        // CREATE KEYSPACE MANUALLY
+        createKeyspace();
+
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE)
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE)
                 .and("cassandra.migration.table-prefix:test");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
@@ -92,9 +111,73 @@ public class CassandraMigrationAutoConfigurationTest {
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
         assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
         assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
     }
 
-    private CqlSession createSession() {
+    @Test
+    public void shouldMigrateDatabaseWhenClusterGivenWithKeyspaceSimpleReplicationAutoCreation() {
+        // GIVEN
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE);
+        testValues.applyTo(context);
+        context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        // WHEN
+        context.getBean(MigrationTask.class);
+
+        // THEN
+        CqlSession session = createSession();
+        KeyspaceMetadata keyspaceMetadata = session.getMetadata().getKeyspace(KEYSPACE).get();
+        String replicationClass = keyspaceMetadata.getReplication().get("class");
+        String replicationFactor = keyspaceMetadata.getReplication().get("replication_factor");
+        assertThat(replicationClass, is("org.apache.cassandra.locator.SimpleStrategy"));
+        assertThat(replicationFactor, is("1"));
+
+        List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
+        assertThat(rows.size(), Matchers.is(equalTo(1)));
+        Row migration = rows.get(0);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
+    }
+
+    @Test
+    public void shouldMigrateDatabaseWhenClusterGivenWithKeyspaceNetworkReplicationAutoCreation() {
+        // GIVEN
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.keyspace.replication-strategy:NETWORK",
+                "cassandra.migration.keyspace.replications[0].datacenter:datacenter1",
+                "cassandra.migration.keyspace.replications[0].replication-factor:1");
+        testValues.applyTo(context);
+        context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        // WHEN
+        context.getBean(MigrationTask.class);
+
+        // THEN
+        CqlSession session = createSession();
+        KeyspaceMetadata keyspaceMetadata = session.getMetadata().getKeyspace(KEYSPACE).get();
+        String replicationClass = keyspaceMetadata.getReplication().get("class");
+        String replicationOnDatacenter1 = keyspaceMetadata.getReplication().get("datacenter1");
+        assertThat(replicationClass, is("org.apache.cassandra.locator.NetworkTopologyStrategy"));
+        assertThat(replicationOnDatacenter1, is("1"));
+
+        List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
+        assertThat(rows.size(), Matchers.is(equalTo(1)));
+        Row migration = rows.get(0);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
+    }
+
+    private static CqlSession createSession() {
         return new ClusterConfig().session();
     }
 

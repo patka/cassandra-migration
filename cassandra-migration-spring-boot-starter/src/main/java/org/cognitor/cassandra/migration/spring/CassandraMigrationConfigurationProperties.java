@@ -4,6 +4,8 @@ import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.util.List;
+
 /**
  * Configuration properties for the cassandra migration library.
  * These values should be set a properties file that is used inside the
@@ -15,11 +17,126 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
-    private String keyspaceName;
     private String tablePrefix = "";
     private String executionProfileName = null;
     private DefaultConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private Boolean withConsensus = false;
+    private KeyspaceProperties keyspace = new KeyspaceProperties();
+
+    /**
+     * Configuration properties for the keyspace.
+     *
+     * @author rbleuse
+     */
+    public static class KeyspaceProperties {
+        private String keyspaceName;
+        private KeyspaceReplicationStrategy replicationStrategy = KeyspaceReplicationStrategy.SIMPLE;
+        private List<KeyspaceReplicationProperties> replications;
+
+        /**
+         * @return true if a keyspace name was provided, false otherwise
+         */
+        public boolean hasKeyspaceName() {
+            return this.keyspaceName != null && !this.keyspaceName.isEmpty();
+        }
+
+        /**
+         * Configuration properties for the keyspace replication.
+         *
+         * @author rbleuse
+         */
+        public static class KeyspaceReplicationProperties {
+            private String datacenter;
+            private int replicationFactor;
+
+            /**
+             *
+             * @return the name of the datacenter.
+             */
+            public String getDatacenter() {
+                return datacenter;
+            }
+
+            /**
+             * Sets the name of the datacenter, used when replication strategy is NETWORK. This
+             * setting is required if replication strategy is NETWORK in order for the migration to work.
+             *
+             * @param datacenter the name of the datacenter
+             */
+            public void setDatacenter(String datacenter) {
+                this.datacenter = datacenter;
+            }
+
+            /**
+             * @return the replication factor to use on the keyspace.
+             */
+            public int getReplicationFactor() {
+                return replicationFactor;
+            }
+
+            /**
+             * Sets the replication factor, used when replication strategy is NETWORK. This
+             * setting is required if replication strategy is NETWORK in order for the migration to work.
+             *
+             * @param replicationFactor the replication factor
+             */
+            public void setReplicationFactor(int replicationFactor) {
+                this.replicationFactor = replicationFactor;
+            }
+        }
+
+        /**
+         * @return the name of the keyspace. Can be null if it was not set
+         *          before.
+         */
+        public String getKeyspaceName() {
+            return keyspaceName;
+        }
+
+        /**
+         * Sets the name of the keyspace that should be migrated. This
+         * setting is required in order for the migration to work.
+         *
+         * @param keyspaceName the name of the keyspace to be migrated
+         */
+        public void setKeyspaceName(String keyspaceName) {
+            this.keyspaceName = keyspaceName;
+        }
+
+        /**
+         * @return the strategy to use when creating the keyspace if required.
+         */
+        public KeyspaceReplicationStrategy getReplicationStrategy() {
+            return replicationStrategy;
+        }
+
+        /**
+         * Sets the strategy that should be used when creating the keyspace if required.
+         *
+         * @param replicationStrategy the replication strategy. This setting is optional.
+         */
+        public void setReplicationStrategy(KeyspaceReplicationStrategy replicationStrategy) {
+            this.replicationStrategy = replicationStrategy;
+        }
+
+        /**
+         * @return the keyspace replication properties.
+         * Can be null if replication strategy is SIMPLE or if keyspace creation is not required
+         */
+        public List<KeyspaceReplicationProperties> getReplications() {
+            return replications;
+        }
+
+        /**
+         * Sets the keyspace replications properties.
+         *
+         * @param replications the replication list to use when creating the keyspace.
+         * This setting is optional.
+         */
+        public void setReplications(List<KeyspaceReplicationProperties> replications) {
+            this.replications = replications;
+        }
+    }
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -44,21 +161,20 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
-     * @return the name of the keyspace. Can be null if it was not set
+     * @return the keyspace properties. Can be null if it was not set
      *          before.
      */
-    public String getKeyspaceName() {
-        return keyspaceName;
+    public KeyspaceProperties getKeyspace() {
+        return keyspace;
     }
 
     /**
-     * Sets the name of the keyspace that should be migrated. This
-     * setting is required in order for the migration to work.
+     * Sets the keyspace properties. This setting is required in order for the migration to work.
      *
-     * @param keyspaceName the name of the keyspace to be migrated
+     * @param keyspace the keyspace properties
      */
-    public void setKeyspaceName(String keyspaceName) {
-        this.keyspaceName = keyspaceName;
+    public void setKeyspaceName(KeyspaceProperties keyspace) {
+        this.keyspace = keyspace;
     }
 
     /**
@@ -76,13 +192,6 @@ public class CassandraMigrationConfigurationProperties {
      */
     public void setStrategy(ScriptCollectorStrategy strategy) {
         this.strategy = strategy;
-    }
-
-    /**
-     * @return true if a keyspace name was provided, false otherwise
-     */
-    public boolean hasKeyspaceName() {
-        return this.keyspaceName != null && !this.keyspaceName.isEmpty();
     }
 
     /**
