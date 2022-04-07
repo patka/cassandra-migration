@@ -48,7 +48,8 @@ when declaring the session bean as shown in the example.
 
 ### Spring Data Cassandra
 If you are using spring-data-cassandra or the reactive counterpart, providing the CqlSession named `CQL_SESSION_BEAN_NAME` to be used by this library
-will bypass the spring data session as it is annotated by [`@ConditionalOnMissingBean`](https://github.com/spring-projects/spring-boot/blob/fdb1010cbc75517f511d4ab82de7d8f0ee058849/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/cassandra/CassandraAutoConfiguration.java#L74)
+will bypass the spring data session as it is annotated by [`@ConditionalOnMissingBean`](https://github.com/spring-projects/spring-boot/blob/fdb1010cbc75517f511d4ab82de7d8f0ee058849/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/cassandra/CassandraAutoConfiguration.java#L74).
+
 The easiest solution is to provide both CqlSession and mark the one used by spring-data as `@Primary` :
 
 ```java
