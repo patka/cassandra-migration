@@ -46,7 +46,7 @@ In order to be sure to use the correct name, there is a public constant in
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
 when declaring the session bean as shown in the example.
 
-### Spring Data Cassandra
+### Spring Data Cassandra 3.X.X
 If you are using spring-data-cassandra or the reactive counterpart, providing the CqlSession named `CQL_SESSION_BEAN_NAME` to be used by this library
 will bypass the spring data session as it is annotated by [`@ConditionalOnMissingBean`](https://github.com/spring-projects/spring-boot/blob/fdb1010cbc75517f511d4ab82de7d8f0ee058849/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/cassandra/CassandraAutoConfiguration.java#L74).
 
@@ -203,7 +203,7 @@ the migration. You have to include the following dependency to make it work:
   </dependency>
 ```
 
-In your properties file you will have some properties that can be set:
+In your properties file you can set the following properties:
 * cassandra.migration.keyspace.keyspace-name Specifies the keyspace that should be migrated
 * cassandra.migration.keyspace.replication-strategy Specifies the replication strategy to use on the keyspace. Can be either SIMPLE or NETWORK
 * cassandra.migration.keyspace.replications Specifies the replication datacenters and factors to use on the keyspace with NETWORK strategy
