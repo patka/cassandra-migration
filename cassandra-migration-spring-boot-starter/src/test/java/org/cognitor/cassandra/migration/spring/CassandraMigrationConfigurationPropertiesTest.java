@@ -22,7 +22,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
         TestPropertyValues testValues = TestPropertyValues.of(
-                "cassandra.migration.script-locations:cassandra/migrationpath,cassandra/other",
+                "cassandra.migration.script-location:cassandra/migrationpath",
                 "cassandra.migration.keyspace-name:test_keyspace",
                 "cassandra.migration.strategy:IGNORE_DUPLICATES",
                 "cassandra.migration.consistency-level:all",
@@ -35,7 +35,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
         assertThat(properties.getKeyspaceName(), is(equalTo("test_keyspace")));
-        assertThat(properties.getScriptLocations(), is(equalTo(Arrays.asList("cassandra/migrationpath", "cassandra/other"))));
+        assertThat(properties.getScriptLocations(), is(equalTo(Collections.singletonList("cassandra/migrationpath"))));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(DefaultConsistencyLevel.ALL)));
         assertThat(properties.getTablePrefix(), is(equalTo("prefix")));
@@ -48,14 +48,14 @@ public class CassandraMigrationConfigurationPropertiesTest {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
         TestPropertyValues testValues = TestPropertyValues.of(
-                "cassandra.migration.script-locations:cassandra/migrationpath");
+                "cassandra.migration.script-locations:cassandra/migrationpath,cassandra/other");
         testValues.applyTo(context);
         context.register(CassandraMigrationAutoConfiguration.class);
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
         assertThat(properties.hasKeyspaceName(), is(false));
-        assertThat(properties.getScriptLocations(), is(equalTo(Collections.singletonList("cassandra/migrationpath"))));
+        assertThat(properties.getScriptLocations(), is(equalTo(Arrays.asList("cassandra/migrationpath", "cassandra/other"))));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
         assertThat(properties.getTablePrefix(), is(equalTo("")));
         assertThat(properties.isWithConsensus(), is(false));
