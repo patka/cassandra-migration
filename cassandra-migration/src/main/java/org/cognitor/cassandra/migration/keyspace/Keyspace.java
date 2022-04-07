@@ -59,13 +59,11 @@ public class Keyspace {
     }
 
     public String getCqlStatement() {
-        StringBuilder builder = new StringBuilder(60);
-        builder.append("CREATE KEYSPACE IF NOT EXISTS ")
-                .append(getKeyspaceName())
-                .append(" WITH REPLICATION = ")
-                .append(getReplicationStrategy().createCqlStatement())
-                .append(" AND DURABLE_WRITES = ")
-                .append(Boolean.toString(isDurableWrites()));
-        return builder.toString();
+        return "CREATE KEYSPACE IF NOT EXISTS " +
+                getKeyspaceName() +
+                " WITH REPLICATION = " +
+                getReplicationStrategy().createCqlStatement() +
+                " AND DURABLE_WRITES = " +
+                Boolean.toString(isDurableWrites());
     }
 }

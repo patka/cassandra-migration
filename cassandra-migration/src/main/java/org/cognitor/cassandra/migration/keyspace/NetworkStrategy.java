@@ -25,15 +25,12 @@ public class NetworkStrategy implements ReplicationStrategy {
             throw new IllegalStateException("There has to be at least one datacenter in order to use NetworkTopologyStrategy.");
         }
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("{")
-                .append("'class':'").append(getName()).append("',");
-
-        builder.append(join(",",
-                dataCenters.keySet().stream().map(dc -> "'" + dc + "':" + dataCenters.get(dc))
-                        .collect(toSet())));
-        builder.append("}");
-        return builder.toString();
+        return "{" +
+                "'class':'" + getName() + "'," +
+                join(",",
+                        dataCenters.keySet().stream().map(dc -> "'" + dc + "':" + dataCenters.get(dc))
+                                .collect(toSet())) +
+                "}";
     }
 
     public NetworkStrategy with(String datacenter, int replicationFactor) {

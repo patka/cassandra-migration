@@ -4,7 +4,7 @@ package org.cognitor.cassandra.migration.keyspace;
  * @author Patrick Kranz
  */
 public class SimpleStrategy implements ReplicationStrategy {
-    private int replicationFactor;
+    private final int replicationFactor;
 
     public SimpleStrategy(int replicationFactor) {
         if (replicationFactor < 1) {
