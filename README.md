@@ -207,7 +207,7 @@ the migration. You have to include the following dependency to make it work:
   </dependency>
 ```
 
-In your properties file you will have new properties that can be set:
+In your properties file you can set the following properties:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
 * cassandra.migration.script-locations Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
