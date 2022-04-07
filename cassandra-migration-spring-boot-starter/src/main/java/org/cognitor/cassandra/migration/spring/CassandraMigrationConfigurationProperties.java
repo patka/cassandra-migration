@@ -26,6 +26,24 @@ public class CassandraMigrationConfigurationProperties {
     private Boolean withConsensus = false;
 
     /**
+     * The location where the scripts reside on the classpath.
+     * The default is <code>MigrationRepository.DEFAULT_SCRIPT_PATH</code> which
+     * points to <code>cassandra/migration</code> on the classpath.
+     * @deprecated
+     * Use {@link #setScriptLocations(List)} instead.
+     *
+     * @param scriptLocation the location of the migration scripts. Must not be null.
+     * @throws IllegalArgumentException when scriptLocation is null or empty
+     */
+    @Deprecated
+    public void setScriptLocation(String scriptLocation) {
+        if (scriptLocation == null || scriptLocation.isEmpty()) {
+            throw new IllegalArgumentException("Script location cannot be unset.");
+        }
+        this.scriptLocations = Collections.singletonList(scriptLocation);
+    }
+
+    /**
      * @return The locations of the migration scripts. Never null.
      */
     public List<String> getScriptLocations() {

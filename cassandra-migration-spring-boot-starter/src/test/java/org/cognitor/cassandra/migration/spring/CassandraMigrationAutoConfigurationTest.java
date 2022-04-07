@@ -68,6 +68,31 @@ public class CassandraMigrationAutoConfigurationTest {
     }
 
     @Test
+    public void shouldMigrateDatabaseWhenClusterGiven() {
+        // GIVEN
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.script-location:cassandra/migration");
+        testValues.applyTo(context);
+        context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        // WHEN
+        context.getBean(MigrationTask.class);
+
+        // THEN
+        CqlSession session = createSession();
+        List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
+        assertThat(rows.size(), is(equalTo(1)));
+        Row migration = rows.get(0);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
+    }
+
+    @Test
     public void shouldMigrateDatabaseWhenClusterGivenWithMultipleLocations() {
         // GIVEN
         AnnotationConfigApplicationContext context =
