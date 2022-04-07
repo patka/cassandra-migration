@@ -5,7 +5,7 @@ import org.junit.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
@@ -26,6 +26,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
                 "cassandra.migration.keyspace.keyspace-name:test_keyspace",
                 "cassandra.migration.keyspace.replication-strategy:NETWORK",
                 "cassandra.migration.keyspace.replications.boston:1",
+                "cassandra.migration.keyspace.replications.tokyo:3",
                 "cassandra.migration.strategy:IGNORE_DUPLICATES",
                 "cassandra.migration.consistency-level:all",
                 "cassandra.migration.table-prefix:prefix",
@@ -38,8 +39,9 @@ public class CassandraMigrationConfigurationPropertiesTest {
                 context.getBean(CassandraMigrationConfigurationProperties.class);
         assertThat(properties.getKeyspace().getKeyspaceName(), is(equalTo("test_keyspace")));
         assertThat(properties.getKeyspace().getReplicationStrategy(), is(KeyspaceReplicationStrategy.NETWORK));
-        assertThat(properties.getKeyspace().getReplications(), is(new HashMap<String, Integer>() {{
+        assertThat(properties.getKeyspace().getReplications(), is(new LinkedHashMap<String, Integer>() {{
             put("boston", 1);
+            put("tokyo", 3);
         }}));
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
