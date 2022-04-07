@@ -69,9 +69,7 @@ public class CassandraMigrationAutoConfiguration {
                         " when using NETWORK strategy in order to migrate your database");
             }
             NetworkStrategy networkStrategy = new NetworkStrategy();
-            properties.getKeyspace().getReplications().forEach(replication ->
-                    networkStrategy.with(replication.getDatacenter(), replication.getReplicationFactor())
-            );
+            properties.getKeyspace().getReplications().forEach(networkStrategy::with);
 
             replicationStrategy = networkStrategy;
         }

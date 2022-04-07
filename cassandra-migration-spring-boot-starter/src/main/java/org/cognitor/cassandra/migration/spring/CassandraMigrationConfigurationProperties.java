@@ -4,7 +4,7 @@ import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import java.util.List;
+import java.util.Map;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -31,58 +31,13 @@ public class CassandraMigrationConfigurationProperties {
     public static class KeyspaceProperties {
         private String keyspaceName;
         private KeyspaceReplicationStrategy replicationStrategy = KeyspaceReplicationStrategy.SIMPLE;
-        private List<KeyspaceReplicationProperties> replications;
+        private Map<String, Integer> replications;
 
         /**
          * @return true if a keyspace name was provided, false otherwise
          */
         public boolean hasKeyspaceName() {
             return this.keyspaceName != null && !this.keyspaceName.isEmpty();
-        }
-
-        /**
-         * Configuration properties for the keyspace replication.
-         *
-         * @author rbleuse
-         */
-        public static class KeyspaceReplicationProperties {
-            private String datacenter;
-            private int replicationFactor;
-
-            /**
-             *
-             * @return the name of the datacenter.
-             */
-            public String getDatacenter() {
-                return datacenter;
-            }
-
-            /**
-             * Sets the name of the datacenter, used when replication strategy is NETWORK. This
-             * setting is required if replication strategy is NETWORK in order for the migration to work.
-             *
-             * @param datacenter the name of the datacenter
-             */
-            public void setDatacenter(String datacenter) {
-                this.datacenter = datacenter;
-            }
-
-            /**
-             * @return the replication factor to use on the keyspace.
-             */
-            public int getReplicationFactor() {
-                return replicationFactor;
-            }
-
-            /**
-             * Sets the replication factor, used when replication strategy is NETWORK. This
-             * setting is required if replication strategy is NETWORK in order for the migration to work.
-             *
-             * @param replicationFactor the replication factor
-             */
-            public void setReplicationFactor(int replicationFactor) {
-                this.replicationFactor = replicationFactor;
-            }
         }
 
         /**
@@ -121,9 +76,9 @@ public class CassandraMigrationConfigurationProperties {
 
         /**
          * @return the keyspace replication properties.
-         * Can be null if replication strategy is SIMPLE or if keyspace creation is not required
+         * Can be null if replication strategy is SIMPLE.
          */
-        public List<KeyspaceReplicationProperties> getReplications() {
+        public Map<String, Integer> getReplications() {
             return replications;
         }
 
@@ -133,7 +88,7 @@ public class CassandraMigrationConfigurationProperties {
          * @param replications the replication list to use when creating the keyspace.
          * This setting is optional.
          */
-        public void setReplications(List<KeyspaceReplicationProperties> replications) {
+        public void setReplications(Map<String, Integer> replications) {
             this.replications = replications;
         }
     }

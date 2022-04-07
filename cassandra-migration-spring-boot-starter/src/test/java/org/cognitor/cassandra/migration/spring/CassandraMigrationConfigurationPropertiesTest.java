@@ -1,14 +1,16 @@
 package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
-import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
 import org.junit.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
-import static org.hamcrest.Matchers.*;
-import static org.hamcrest.core.Is.is;
+import java.util.HashMap;
+
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.core.Is.is;
 
 /**
  * @author Patrick Kranz
@@ -23,6 +25,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
                 "cassandra.migration.script-location:cassandra/migrationpath",
                 "cassandra.migration.keyspace.keyspace-name:test_keyspace",
                 "cassandra.migration.keyspace.replication-strategy:NETWORK",
+                "cassandra.migration.keyspace.replications.boston:1",
                 "cassandra.migration.strategy:IGNORE_DUPLICATES",
                 "cassandra.migration.consistency-level:all",
                 "cassandra.migration.table-prefix:prefix",
@@ -35,6 +38,9 @@ public class CassandraMigrationConfigurationPropertiesTest {
                 context.getBean(CassandraMigrationConfigurationProperties.class);
         assertThat(properties.getKeyspace().getKeyspaceName(), is(equalTo("test_keyspace")));
         assertThat(properties.getKeyspace().getReplicationStrategy(), is(KeyspaceReplicationStrategy.NETWORK));
+        assertThat(properties.getKeyspace().getReplications(), is(new HashMap<String, Integer>() {{
+            put("boston", 1);
+        }}));
         assertThat(properties.getScriptLocation(), is(equalTo("cassandra/migrationpath")));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.IGNORE_DUPLICATES)));
         assertThat(properties.getConsistencyLevel(), is(equalTo(DefaultConsistencyLevel.ALL)));

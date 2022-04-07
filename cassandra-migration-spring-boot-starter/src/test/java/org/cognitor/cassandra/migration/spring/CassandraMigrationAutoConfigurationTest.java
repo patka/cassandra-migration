@@ -5,12 +5,14 @@ import com.datastax.oss.driver.api.core.CqlSessionBuilder;
 import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
-import com.datastax.oss.driver.api.core.metadata.Metadata;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.*;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -151,8 +153,7 @@ public class CassandraMigrationAutoConfigurationTest {
                 new AnnotationConfigApplicationContext();
         TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE,
                 "cassandra.migration.keyspace.replication-strategy:NETWORK",
-                "cassandra.migration.keyspace.replications[0].datacenter:datacenter1",
-                "cassandra.migration.keyspace.replications[0].replication-factor:1");
+                "cassandra.migration.keyspace.replications.datacenter1:1");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
