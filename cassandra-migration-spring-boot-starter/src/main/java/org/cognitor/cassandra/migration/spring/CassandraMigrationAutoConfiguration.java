@@ -8,9 +8,7 @@ import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.collector.FailOnDuplicatesCollector;
 import org.cognitor.cassandra.migration.collector.IgnoreDuplicatesCollector;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
-import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
-import org.cognitor.cassandra.migration.keyspace.SimpleStrategy;
 import org.cognitor.cassandra.migration.scanner.ScannerRegistry;
 import org.cognitor.cassandra.migration.spring.scanner.SpringBootLocationScanner;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +21,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.util.CollectionUtils;
 
 /**
  * @author Patrick Kranz
