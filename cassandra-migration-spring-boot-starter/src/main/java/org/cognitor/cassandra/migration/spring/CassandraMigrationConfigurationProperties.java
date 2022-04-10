@@ -2,9 +2,11 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
+import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
+import org.cognitor.cassandra.migration.spring.keyspace.KeyspaceReplicationStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.NetworkStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.SimpleStrategyDefinition;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-
-import java.util.Map;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -17,81 +19,13 @@ import java.util.Map;
 public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private String scriptLocation = MigrationRepository.DEFAULT_SCRIPT_PATH;
+    private String keyspaceName;
+    private KeyspaceReplicationStrategyDefinition simpleStrategy = new SimpleStrategyDefinition();
+    private KeyspaceReplicationStrategyDefinition networkStrategy;
     private String tablePrefix = "";
     private String executionProfileName = null;
     private DefaultConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private Boolean withConsensus = false;
-    private KeyspaceProperties keyspace = new KeyspaceProperties();
-
-    /**
-     * Configuration properties for the keyspace.
-     *
-     * @author rbleuse
-     */
-    public static class KeyspaceProperties {
-        private String keyspaceName;
-        private KeyspaceReplicationStrategy replicationStrategy = KeyspaceReplicationStrategy.SIMPLE;
-        private Map<String, Integer> replications;
-
-        /**
-         * @return true if a keyspace name was provided, false otherwise
-         */
-        public boolean hasKeyspaceName() {
-            return this.keyspaceName != null && !this.keyspaceName.isEmpty();
-        }
-
-        /**
-         * @return the name of the keyspace. Can be null if it was not set
-         *          before.
-         */
-        public String getKeyspaceName() {
-            return keyspaceName;
-        }
-
-        /**
-         * Sets the name of the keyspace that should be migrated. This
-         * setting is required in order for the migration to work.
-         *
-         * @param keyspaceName the name of the keyspace to be migrated
-         */
-        public void setKeyspaceName(String keyspaceName) {
-            this.keyspaceName = keyspaceName;
-        }
-
-        /**
-         * @return the strategy to use when creating the keyspace if required.
-         */
-        public KeyspaceReplicationStrategy getReplicationStrategy() {
-            return replicationStrategy;
-        }
-
-        /**
-         * Sets the strategy that should be used when creating the keyspace if required.
-         *
-         * @param replicationStrategy the replication strategy. This setting is optional.
-         */
-        public void setReplicationStrategy(KeyspaceReplicationStrategy replicationStrategy) {
-            this.replicationStrategy = replicationStrategy;
-        }
-
-        /**
-         * @return the keyspace replication properties.
-         * Can be null if replication strategy is SIMPLE.
-         */
-        public Map<String, Integer> getReplications() {
-            return replications;
-        }
-
-        /**
-         * Sets the keyspace replications properties.
-         *
-         * @param replications the replication list to use when creating the keyspace.
-         * This setting is optional.
-         */
-        public void setReplications(Map<String, Integer> replications) {
-            this.replications = replications;
-        }
-    }
 
     /**
      * @return The location of the migration scripts. Never null.
@@ -116,33 +50,58 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
+     * @return the name of the keyspace. Can be null if it was not set
+     *          before.
+     */
+    public String getKeyspaceName() {
+        return keyspaceName;
+    }
+
+    /**
      * Sets the name of the keyspace that should be migrated. This
      * setting is required in order for the migration to work.
-     * Sets the keyspace properties. This setting is required in order for the migration to work.
-     * @deprecated Use {@link #setKeyspace(KeyspaceProperties)} instead.
      *
      * @param keyspaceName the name of the keyspace to be migrated
      */
-    @Deprecated
     public void setKeyspaceName(String keyspaceName) {
-        this.keyspace.setKeyspaceName(keyspaceName);
+        this.keyspaceName = keyspaceName;
     }
 
     /**
-     * @return the keyspace properties. Can be null if it was not set
-     *          before.
+     * @return true if a keyspace name was provided, false otherwise
      */
-    public KeyspaceProperties getKeyspace() {
-        return keyspace;
+    public boolean hasKeyspaceName() {
+        return this.keyspaceName != null && !this.keyspaceName.isEmpty();
     }
 
     /**
-     * Sets the keyspace properties. This setting is required in order for the migration to work.
+     * @return the strategy to use for creating keyspace. network strategy if is present,
+     * simple strategy otherwise.
+     */
+    public ReplicationStrategy getReplicationStrategy() {
+        if (networkStrategy == null) {
+            return simpleStrategy.getStrategy();
+        }
+
+        return networkStrategy.getStrategy();
+    }
+
+    /**
+     * Sets the simple replication strategy that should be used to create keyspace
      *
-     * @param keyspace the keyspace properties
+     * @param simpleStrategy the simple strategy. This setting is optional.
      */
-    public void setKeyspace(KeyspaceProperties keyspace) {
-        this.keyspace = keyspace;
+    public void setSimpleStrategy(SimpleStrategyDefinition simpleStrategy) {
+        this.simpleStrategy = simpleStrategy;
+    }
+
+    /**
+     * Sets the network replication strategy that should be used to create keyspace
+     *
+     * @param networkStrategy the network strategy. This setting is optional.
+     */
+    public void setNetworkStrategy(NetworkStrategyDefinition networkStrategy) {
+        this.networkStrategy = networkStrategy;
     }
 
     /**

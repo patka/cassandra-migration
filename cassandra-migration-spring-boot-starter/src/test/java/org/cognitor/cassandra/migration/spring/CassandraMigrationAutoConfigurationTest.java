@@ -68,7 +68,7 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -95,7 +95,7 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE)
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE)
                 .and("cassandra.migration.table-prefix:test");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
@@ -121,7 +121,7 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -151,9 +151,8 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace.keyspace-name:" + KEYSPACE,
-                "cassandra.migration.keyspace.replication-strategy:NETWORK",
-                "cassandra.migration.keyspace.replications.datacenter1:1");
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.network-strategy.replications.datacenter1:1");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
