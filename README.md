@@ -204,9 +204,9 @@ the migration. You have to include the following dependency to make it work:
 ```
 
 In your properties file you can set the following properties:
-* cassandra.migration.keyspace.keyspace-name Specifies the keyspace that should be migrated
-* cassandra.migration.keyspace.replication-strategy Specifies the replication strategy to use on the keyspace. Can be either SIMPLE or NETWORK
-* cassandra.migration.keyspace.replications Specifies the replication datacenters and factors to use on the keyspace with NETWORK strategy
+* cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
+* cassandra.migration.simple-strategy.replication-factor Specifies the simple strategy to use on the keyspace
+* cassandra.migration.network-strategy.replications Specifies the network strategy to use on the keyspace with datacenters and factors
 * cassandra.migration.script-location Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations
