@@ -46,7 +46,7 @@ public class CassandraMigrationConfigurationProperties {
      * @return The locations of the migration scripts. Never null.
      */
     public List<String> getScriptLocations() {
-        return scriptLocations;
+        return Collections.unmodifiableList(scriptLocations);
     }
 
     /**
