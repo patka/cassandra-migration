@@ -33,7 +33,7 @@ public class JarLocationScannerTest {
 
     @Before
     public void windowsOnly() {
-        Assume.assumeFalse(isWindows());
+        Assume.assumeFalse("Disable tests on Windows", isWindows());
     }
 
     @BeforeClass

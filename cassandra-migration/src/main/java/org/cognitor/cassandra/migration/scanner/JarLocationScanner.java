@@ -43,7 +43,7 @@ public class JarLocationScanner implements LocationScanner {
             LOGGER.debug("Trying to get existing filesystem for {}", location.toString());
             return FileSystems.getFileSystem(location);
         } catch (FileSystemNotFoundException exception) {
-            LOGGER.debug("Creating new filesystem for {}", location.toString());
+            LOGGER.debug("Creating new filesystem for {}", location);
             return FileSystems.newFileSystem(location, emptyMap());
         }
     }
