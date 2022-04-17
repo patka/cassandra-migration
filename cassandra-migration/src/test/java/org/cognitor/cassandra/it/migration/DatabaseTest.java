@@ -20,8 +20,6 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -49,7 +47,6 @@ public class DatabaseTest {
     private static final int REQUEST_TIMEOUT_IN_SECONDS = 30;
     private CqlSession session;
     private static Cassandra cassandra;
-    private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseTest.class);
 
     @BeforeClass
     public static void initDb() {
@@ -58,7 +55,6 @@ public class DatabaseTest {
                 .addConfigProperty("enable_user_defined_functions", true)
                 .build();
         cassandra.start();
-        LOGGER.warn("cassandra started successfully");
     }
 
     @AfterClass
@@ -66,7 +62,6 @@ public class DatabaseTest {
         if (null != cassandra) {
             cassandra.stop();
         }
-        LOGGER.warn("cassandra stopped successfully");
     }
 
     @Before

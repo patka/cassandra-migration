@@ -10,8 +10,6 @@ import com.github.nosan.embedded.cassandra.CassandraBuilder;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.junit.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -33,7 +31,6 @@ public class CassandraMigrationAutoConfigurationTest {
     private static final String KEYSPACE = "test_keyspace";
 
     private static Cassandra cassandra;
-    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraMigrationAutoConfigurationTest.class);
 
     @BeforeClass
     public static void initDb() {
@@ -41,7 +38,6 @@ public class CassandraMigrationAutoConfigurationTest {
                 .version("3.11.12")
                 .build();
         cassandra.start();
-        LOGGER.warn("cassandra started successfully");
     }
 
     @AfterClass
@@ -49,7 +45,6 @@ public class CassandraMigrationAutoConfigurationTest {
         if (null != cassandra) {
             cassandra.stop();
         }
-        LOGGER.warn("cassandra stopped successfully");
     }
 
     @Before
