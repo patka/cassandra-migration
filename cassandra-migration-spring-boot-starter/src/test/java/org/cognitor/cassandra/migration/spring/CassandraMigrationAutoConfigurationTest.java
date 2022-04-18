@@ -6,13 +6,12 @@ import com.datastax.oss.driver.api.core.config.DefaultDriverOption;
 import com.datastax.oss.driver.api.core.config.DriverConfigLoader;
 import com.datastax.oss.driver.api.core.cql.Row;
 import com.datastax.oss.driver.api.core.metadata.schema.KeyspaceMetadata;
+import com.github.nosan.embedded.cassandra.Cassandra;
+import com.github.nosan.embedded.cassandra.CassandraBuilder;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -32,10 +31,15 @@ import static org.hamcrest.Matchers.*;
  */
 public class CassandraMigrationAutoConfigurationTest {
     private static final String KEYSPACE = "test_keyspace";
+    private static Cassandra cassandra;
     private static CqlSession session;
 
     @BeforeClass
     public static void beforeClass() {
+        cassandra = new CassandraBuilder()
+                .version("3.11.12")
+                .build();
+        cassandra.start();
         session = createSession();
         dropKeyspaceIfExists();
     }
@@ -46,13 +50,15 @@ public class CassandraMigrationAutoConfigurationTest {
     }
 
     @AfterClass
-    public static void afterClass() {
-        dropKeyspaceIfExists();
+    public static void stopDb() {
         session.close();
+        if (null != cassandra) {
+            cassandra.stop();
+        }
     }
 
     private static void createKeyspace() {
-        session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
+        session.execute("CREATE KEYSPACE " + KEYSPACE + " WITH REPLICATION = " +
                 "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
     }
 
@@ -68,7 +74,8 @@ public class CassandraMigrationAutoConfigurationTest {
         // GIVEN
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
-        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE);
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.script-location:cassandra/migration");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
@@ -78,12 +85,42 @@ public class CassandraMigrationAutoConfigurationTest {
         // THEN
         CqlSession session = createSession();
         List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
-        assertThat(rows.size(), Matchers.is(equalTo(1)));
+        assertThat(rows.size(), is(equalTo(1)));
         Row migration = rows.get(0);
         assertThat(migration.getBoolean("applied_successful"), is(true));
         assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
         assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
         assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        session.close();
+    }
+
+    @Test
+    public void shouldMigrateDatabaseWhenClusterGivenWithMultipleLocationsWithoutAutoKeyspaceCreation() {
+        // GIVEN
+        AnnotationConfigApplicationContext context =
+                new AnnotationConfigApplicationContext();
+        TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
+                "cassandra.migration.script-locations:cassandra/dev,cassandra/common");
+        testValues.applyTo(context);
+        context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
+        context.refresh();
+        // WHEN
+        context.getBean(MigrationTask.class);
+
+        // THEN
+        CqlSession session = createSession();
+        List<Row> rows = session.execute("SELECT * FROM " + KEYSPACE + ".schema_migration").all();
+        assertThat(rows.size(), is(equalTo(2)));
+        Row migration = rows.get(0);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("001_create_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("CREATE TABLE"));
+        migration = rows.get(1);
+        assertThat(migration.getBoolean("applied_successful"), is(true));
+        assertThat(migration.getInstant("executed_at"), is(not(nullValue())));
+        assertThat(migration.getString("script_name"), is(CoreMatchers.equalTo("100_populate_person_table.cql")));
+        assertThat(migration.getString("script"), startsWith("INSERT INTO"));
         session.close();
     }
 

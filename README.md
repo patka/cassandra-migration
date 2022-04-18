@@ -67,18 +67,19 @@ public CqlSession cassandraSession(CqlSessionBuilder cqlSessionBuilder) {
 }
 ```
 
-### Testing in v4
-Since cassandra-unit, the library that was used to start an in memory instance of Cassandra for testing, is
-not yet released with support for driver version 4, the only option at the moment to run the integration tests
-is to run them against a running instance on localhost. In all integration tests there is a static
-field declared that is called `CASSANDRA_HOST`. You can modify that if you cassandra instance runs on 
-a different host.
-As the tests also test the creation of user defined functions you need to change the configuration parameter
-`enabled_user_defined_functions` from false to true in the cassandra.yaml config file.
+### Testing
+This library uses [embedded-cassandra](https://github.com/nosan/embedded-cassandra) to test migration scripts with a running Cassandra instance.
+We can change easily the embedded Cassandra version used by updating the version in tests :
+```
+cassandra = new CassandraBuilder()
+        .version("3.11.12")
+        .build();
+```
+Since Cassandra dropped support on Windows environment after [4.0-beta3 (CASSANDRA-16171)](https://issues.apache.org/jira/browse/CASSANDRA-16171), the only solution for testing on Cassandra 4+ on Windows will be to use [TestContainers](https://www.testcontainers.org/modules/databases/cassandra/), but it requires a Docker installation.
 
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
-cluster object all you need to do is integrate the next lines in your projects startup code:
+cluster object all you need to do is integrate the next lines in your project startup code:
 
 ```
 Database database = new Database(cluster, "nameOfMyKeyspace");
@@ -123,7 +124,7 @@ Multi line comments are not supported.
 
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.
-Besides this after the scripts are executed, it wil be checked if the schema is in agreement by calling the
+Besides this after the scripts are executed, it will be checked if the schema is in agreement by calling the
 corresponding method on the metadata of the ResultSet. That call is blocking until either an agreement has been
 reached or the configured `maxSchemaAgreementWaitSeconds` have been passed. This value can be configured on the Cluster
 builder. 
@@ -141,8 +142,8 @@ the actions or, the preferred approach, make use of Cassandras "IF EXISTS" or "I
 ensure that the same script can be run multiple times without failing.
 
 ## More details
-The library checks if there is a table inside the given keyspace that is called "schema_migration". If it
-is not existing it will be created and it contains the following columns:
+The library checks if there is a table inside the given keyspace that is called "schema_migration". It will be created if it
+doesn't already exist and will contain the following columns:
 * applied_successful (boolean)
 * version (int)
 * script_name varchar
@@ -172,8 +173,6 @@ just for the migration of the schema. In that case you can define a separate pro
 used just for migrations. Have a look on the [Datastax documentation](https://docs.datastax.com/en/developer/java-driver/4.6/manual/core/configuration/)
 on how to define such a profile.
 Once defined, you can set the execution profile name in the `MigrationConfiguration` and it will be used during migration.
-`execution-profile-name` is also available in the spring auto configuration and canbe used in the `application.properties`
-file.
 
 ## Version deprecation
 Please be aware that the version 2 of this library that uses the old version 3 Datastax driver will be deprecated by end
@@ -188,7 +187,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.4.0_v4</version>
+      <version>2.5.0_v4</version>
   </dependency>
 ```
 
@@ -199,7 +198,7 @@ the migration. You have to include the following dependency to make it work:
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-      <version>2.4.0_v4</version>
+      <version>2.5.0_v4</version>
   </dependency>
 ```
 
@@ -207,7 +206,9 @@ In your properties file you can set the following properties:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
 * cassandra.migration.simple-strategy.replication-factor Specifies the simple strategy to use on the keyspace
 * cassandra.migration.network-strategy.replications Specifies the network strategy to use on the keyspace with datacenters and factors
-* cassandra.migration.script-location Overrides the default script location
+* cassandra.migration.script-locations Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations
-* cassandra.migration.table-prefix Prefix for the the migrations table name 
+* cassandra.migration.table-prefix Prefix for the migrations table name
+* cassandra.migration.execution-profile-name the name for the execution profile
+* cassandra.migration.with-consensus to prevent concurrent schema updates.

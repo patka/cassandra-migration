@@ -70,8 +70,8 @@ public class CassandraMigrationAutoConfiguration {
         ScannerRegistry registry = new ScannerRegistry();
         registry.register(ScannerRegistry.JAR_SCHEME, new SpringBootLocationScanner());
         if (properties.getStrategy() == ScriptCollectorStrategy.FAIL_ON_DUPLICATES) {
-            return new MigrationRepository(properties.getScriptLocation(), new FailOnDuplicatesCollector(), registry);
+            return new MigrationRepository(properties.getScriptLocations(), new FailOnDuplicatesCollector(), registry);
         }
-        return new MigrationRepository(properties.getScriptLocation(), new IgnoreDuplicatesCollector(), registry);
+        return new MigrationRepository(properties.getScriptLocations(), new IgnoreDuplicatesCollector(), registry);
     }
 }
