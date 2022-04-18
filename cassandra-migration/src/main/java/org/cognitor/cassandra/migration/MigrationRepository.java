@@ -176,15 +176,7 @@ public class MigrationRepository {
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
-            for (String scriptPath : scriptPaths) {
-                scanAndCollectScripts(normalizePath(notNullOrEmpty(scriptPath, "scriptPath")));
-            }
-
-            List<ScriptFile> scripts = new ArrayList<>(scriptCollector.getScriptFiles());
-            LOGGER.info(format("Found %d migration scripts", scripts.size()));
-
-            sort(scripts);
-            migrationScripts = scripts;
+            migrationScripts = scanForScripts(scriptPaths);
         } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }
@@ -227,27 +219,36 @@ public class MigrationRepository {
         return migrationScripts.get(migrationScripts.size() - 1).getVersion();
     }
 
-    private void scanAndCollectScripts(String scriptPath) throws IOException, URISyntaxException {
-        LOGGER.debug("Scanning for cql migration scripts in " + scriptPath);
-        Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(scriptPath);
-        while (scriptResources.hasMoreElements()) {
-            URI script = scriptResources.nextElement().toURI();
-            LOGGER.debug("Potential script folder: {}", script);
-            if (!scannerRegistry.supports(script.getScheme())) {
-                LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.", script.getScheme());
-                continue;
-            }
-            LocationScanner scanner = scannerRegistry.getScanner(script.getScheme());
-            for (String resource : scanner.findResourceNames(scriptPath, script)) {
-                if (isMigrationScript(resource)) {
-                    String scriptName = extractScriptName(resource);
-                    int version = extractScriptVersion(scriptName);
-                    scriptCollector.collect(new ScriptFile(version, resource, scriptName));
-                } else {
-                    LOGGER.warn(format("Ignoring file %s because it is not a cql file.", resource));
+    private List<ScriptFile> scanForScripts(List<String> scriptPaths) throws IOException, URISyntaxException {
+        for (String scriptPath : scriptPaths) {
+            String normalizedPath = normalizePath(notNullOrEmpty(scriptPath, "scriptPath"));
+
+            LOGGER.debug("Scanning for cql migration scripts in " + normalizedPath);
+            Enumeration<URL> scriptResources = getClass().getClassLoader().getResources(normalizedPath);
+            while (scriptResources.hasMoreElements()) {
+                URI script = scriptResources.nextElement().toURI();
+                LOGGER.debug("Potential script folder: {}", script);
+                if (!scannerRegistry.supports(script.getScheme())) {
+                    LOGGER.debug("No LocationScanner available for scheme '{}'. Skipping it.", script.getScheme());
+                    continue;
+                }
+                LocationScanner scanner = scannerRegistry.getScanner(script.getScheme());
+                for (String resource : scanner.findResourceNames(normalizedPath, script)) {
+                    if (isMigrationScript(resource)) {
+                        String scriptName = extractScriptName(resource);
+                        int version = extractScriptVersion(scriptName);
+                        scriptCollector.collect(new ScriptFile(version, resource, scriptName));
+                    } else {
+                        LOGGER.warn(format("Ignoring file %s because it is not a cql file.", resource));
+                    }
                 }
             }
         }
+
+        List<ScriptFile> scripts = new ArrayList<>(scriptCollector.getScriptFiles());
+        LOGGER.info(format("Found %d migration scripts", scripts.size()));
+        sort(scripts);
+        return scripts;
     }
 
     private static int extractScriptVersion(String scriptName) {

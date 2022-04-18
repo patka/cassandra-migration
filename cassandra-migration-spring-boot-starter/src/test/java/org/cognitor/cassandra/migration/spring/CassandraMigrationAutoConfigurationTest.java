@@ -93,7 +93,7 @@ public class CassandraMigrationAutoConfigurationTest {
         AnnotationConfigApplicationContext context =
                 new AnnotationConfigApplicationContext();
         TestPropertyValues testValues = TestPropertyValues.of("cassandra.migration.keyspace-name:" + KEYSPACE,
-                "cassandra.migration.script-locations:cassandra/common,cassandra/dev");
+                "cassandra.migration.script-locations:cassandra/dev,cassandra/common");
         testValues.applyTo(context);
         context.register(ClusterConfig.class, CassandraMigrationAutoConfiguration.class);
         context.refresh();
