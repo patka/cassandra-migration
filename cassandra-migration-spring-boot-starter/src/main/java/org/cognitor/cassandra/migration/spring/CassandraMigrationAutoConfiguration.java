@@ -44,7 +44,7 @@ public class CassandraMigrationAutoConfiguration {
     @ConditionalOnMissingBean(MigrationTask.class)
     public MigrationTask migrationTask(@Qualifier(CQL_SESSION_BEAN_NAME) CqlSession cqlSession) {
         if (!properties.hasKeyspaceName()) {
-            throw new IllegalStateException("Please specify ['cassandra.migration.keyspace.keyspace-name'] in" +
+            throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
 
