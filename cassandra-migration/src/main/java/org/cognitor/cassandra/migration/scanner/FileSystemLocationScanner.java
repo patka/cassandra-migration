@@ -4,7 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.Set;
@@ -29,9 +28,8 @@ public class FileSystemLocationScanner implements LocationScanner {
      * @param location    The system-independent location on the classpath.
      * @param locationUri The system-specific physical location URI.
      * @return a sorted set containing all the resources inside the given location
-     * @throws IOException if an error accessing the filesystem happens
      */
-    public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
+    public Set<String> findResourceNames(String location, URI locationUri) {
         String filePath = toFilePath(locationUri);
         File folder = new File(filePath);
         if (!folder.isDirectory()) {

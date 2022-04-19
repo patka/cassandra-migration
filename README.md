@@ -28,7 +28,7 @@ supposed to be used with this library. You can do this by adding the name to the
 In order to make sure that this session will not be used by your application, you can
 mark the application session as primary. 
 Here is an example for a programmatic configuration:
-```
+```java
 @Bean
 @Qualifier(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
 public CqlSession cassandraMigrationCqlSession() {
@@ -46,27 +46,24 @@ In order to be sure to use the correct name, there is a public constant in
 `CassandraMigrationAutoConfiguration` that is called `CQL_SESSION_BEAN_NAME`. You can use that
 when declaring the session bean as shown in the example.
 
-### Reactive Cassandra Driver
-If you are using spring-data-cassandra or the reactive counterpart, you will not have easy access
-to the ```CqlSession``` as it is created inside the ```CqlSessionFactoryBean``` and that class maintains
-the ```CqlSession``` as a singleton.
+### Spring Data Cassandra 3.X.X
+If you are using spring-data-cassandra or the reactive counterpart, providing the CqlSession named `CQL_SESSION_BEAN_NAME` to be used by this library
+will bypass the spring data session as it is annotated by [`@ConditionalOnMissingBean`](https://github.com/spring-projects/spring-boot/blob/fdb1010cbc75517f511d4ab82de7d8f0ee058849/spring-boot-project/spring-boot-autoconfigure/src/main/java/org/springframework/boot/autoconfigure/cassandra/CassandraAutoConfiguration.java#L74).
 
-As per my understanding the easiest solution would be to manually create another session in the manner
-shown above so that ```cassandra-migration``` can pick it up. If you encounter any problems with the
-wrong ```CqlSession``` ending up wired to your beans, you can mark the ```CqlSession``` created by Spring
-as primary by using a ```BeanFactoryPostProcessor```:
+The easiest solution is to provide both CqlSession and mark the one used by spring-data as `@Primary` :
 
-```
-import org.springframework.data.cassandra.config.DefaultCqlBeanNames;
+```java
+@Bean(CassandraMigrationAutoConfiguration.CQL_SESSION_BEAN_NAME)
+public CqlSession cassandraMigrationCqlSession() {
+    // migration session creation code here
+}
 
-@Component
-public class CqlSessionFactoryPostProcessor implements BeanFactoryPostProcessor {
-
-    @Override
-    public void postProcessBeanFactory(ConfigurableListableBeanFactory beanFactory) throws BeansException {
-        BeanDefinition bd = beanFactory.getBeanDefinition(DefaultCqlBeanNames.SESSION);
-        bd.setPrimary(true);
-    }
+@Bean(DefaultCqlBeanNames.SESSION)
+@Primary
+// ensure that the keyspace is created if needed before initializing spring-data session
+@DependsOn(CassandraMigrationAutoConfiguration.MIGRATION_TASK_BEAN_NAME)
+public CqlSession cassandraSession(CqlSessionBuilder cqlSessionBuilder) {
+    return cqlSessionBuilder.build();
 }
 ```
 
@@ -127,7 +124,7 @@ Multi line comments are not supported.
 
 ## Migrations
 Migrations are executed with the Quorum consistency level to make sure that always a majority of nodes share the same schema information.
-Besides this after the scripts are executed, it wil be checked if the schema is in agreement by calling the
+Besides this after the scripts are executed, it will be checked if the schema is in agreement by calling the
 corresponding method on the metadata of the ResultSet. That call is blocking until either an agreement has been
 reached or the configured `maxSchemaAgreementWaitSeconds` have been passed. This value can be configured on the Cluster
 builder. 
@@ -145,8 +142,8 @@ the actions or, the preferred approach, make use of Cassandras "IF EXISTS" or "I
 ensure that the same script can be run multiple times without failing.
 
 ## More details
-The library checks if there is a table inside the given keyspace that is called "schema_migration". If it
-is not existing it will be created and it contains the following columns:
+The library checks if there is a table inside the given keyspace that is called "schema_migration". It will be created if it
+doesn't already exist and will contain the following columns:
 * applied_successful (boolean)
 * version (int)
 * script_name varchar
@@ -176,8 +173,6 @@ just for the migration of the schema. In that case you can define a separate pro
 used just for migrations. Have a look on the [Datastax documentation](https://docs.datastax.com/en/developer/java-driver/4.6/manual/core/configuration/)
 on how to define such a profile.
 Once defined, you can set the execution profile name in the `MigrationConfiguration` and it will be used during migration.
-`execution-profile-name` is also available in the spring auto configuration and can be used in the `application.properties`
-file.
 
 ## Version deprecation
 Please be aware that the version 2 of this library that uses the old version 3 Datastax driver will be deprecated by end
@@ -209,6 +204,8 @@ the migration. You have to include the following dependency to make it work:
 
 In your properties file you can set the following properties:
 * cassandra.migration.keyspace-name Specifies the keyspace that should be migrated
+* cassandra.migration.simple-strategy.replication-factor Specifies the simple strategy to use on the keyspace
+* cassandra.migration.network-strategy.replications Specifies the network strategy to use on the keyspace with datacenters and factors
 * cassandra.migration.script-locations Overrides the default script location
 * cassandra.migration.strategy Can either be IGNORE_DUPLICATES or FAIL_ON_DUPLICATES
 * cassandra.migration.consistency-level Provides the consistency level that will be used to execute migrations

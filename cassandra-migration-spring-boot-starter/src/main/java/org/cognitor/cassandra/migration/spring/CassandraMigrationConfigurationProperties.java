@@ -2,6 +2,10 @@ package org.cognitor.cassandra.migration.spring;
 
 import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.MigrationRepository;
+import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
+import org.cognitor.cassandra.migration.spring.keyspace.KeyspaceReplicationStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.NetworkStrategyDefinition;
+import org.cognitor.cassandra.migration.spring.keyspace.SimpleStrategyDefinition;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.util.CollectionUtils;
 
@@ -20,6 +24,8 @@ public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
     private List<String> scriptLocations = Collections.singletonList(MigrationRepository.DEFAULT_SCRIPT_PATH);
     private String keyspaceName;
+    private KeyspaceReplicationStrategyDefinition simpleStrategy = new SimpleStrategyDefinition();
+    private KeyspaceReplicationStrategyDefinition networkStrategy;
     private String tablePrefix = "";
     private String executionProfileName = null;
     private DefaultConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
@@ -83,6 +89,43 @@ public class CassandraMigrationConfigurationProperties {
     }
 
     /**
+     * @return true if a keyspace name was provided, false otherwise
+     */
+    public boolean hasKeyspaceName() {
+        return this.keyspaceName != null && !this.keyspaceName.isEmpty();
+    }
+
+    /**
+     * @return the strategy to use for creating keyspace. network strategy if is present,
+     * simple strategy otherwise.
+     */
+    public ReplicationStrategy getReplicationStrategy() {
+        if (networkStrategy == null) {
+            return simpleStrategy.getStrategy();
+        }
+
+        return networkStrategy.getStrategy();
+    }
+
+    /**
+     * Sets the simple replication strategy that should be used to create keyspace
+     *
+     * @param simpleStrategy the simple strategy. This setting is optional.
+     */
+    public void setSimpleStrategy(SimpleStrategyDefinition simpleStrategy) {
+        this.simpleStrategy = simpleStrategy;
+    }
+
+    /**
+     * Sets the network replication strategy that should be used to create keyspace
+     *
+     * @param networkStrategy the network strategy. This setting is optional.
+     */
+    public void setNetworkStrategy(NetworkStrategyDefinition networkStrategy) {
+        this.networkStrategy = networkStrategy;
+    }
+
+    /**
      * @return the strategy to use for collecting scripts inside the repository.
      */
     public ScriptCollectorStrategy getStrategy() {
@@ -97,13 +140,6 @@ public class CassandraMigrationConfigurationProperties {
      */
     public void setStrategy(ScriptCollectorStrategy strategy) {
         this.strategy = strategy;
-    }
-
-    /**
-     * @return true if a keyspace name was provided, false otherwise
-     */
-    public boolean hasKeyspaceName() {
-        return this.keyspaceName != null && !this.keyspaceName.isEmpty();
     }
 
     /**
