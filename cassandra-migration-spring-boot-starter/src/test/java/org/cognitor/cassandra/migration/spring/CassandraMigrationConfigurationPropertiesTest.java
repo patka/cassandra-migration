@@ -5,8 +5,6 @@ import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
 import org.cognitor.cassandra.migration.keyspace.SimpleStrategy;
 import org.junit.Test;
-import org.springframework.beans.BeanInstantiationException;
-import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.core.NestedExceptionUtils;
