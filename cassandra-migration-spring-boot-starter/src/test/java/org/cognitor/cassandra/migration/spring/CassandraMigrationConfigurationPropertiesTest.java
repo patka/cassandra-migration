@@ -58,6 +58,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
+        assertThat(properties.hasKeyspaceName(), is(true));
         assertThat(properties.getKeyspaceName(), is(equalTo("test_keyspace")));
         ReplicationStrategy replicationStrategy = properties.getReplicationStrategy();
         assertThat(replicationStrategy, is(instanceOf(NetworkStrategy.class)));
@@ -91,6 +92,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
+        assertThat(properties.hasKeyspaceName(), is(true));
         assertThat(properties.getKeyspaceName(), is(equalTo("test_keyspace")));
         ReplicationStrategy replicationStrategy = properties.getReplicationStrategy();
         assertThat(replicationStrategy, is(instanceOf(SimpleStrategy.class)));
@@ -115,6 +117,7 @@ public class CassandraMigrationConfigurationPropertiesTest {
         context.refresh();
         CassandraMigrationConfigurationProperties properties =
                 context.getBean(CassandraMigrationConfigurationProperties.class);
+        assertThat(properties.hasKeyspaceName(), is(true));
         assertThat(properties.getScriptLocations(), is(equalTo(Arrays.asList("cassandra/migrationpath", "cassandra/other"))));
         assertThat(properties.getStrategy(), is(equalTo(ScriptCollectorStrategy.FAIL_ON_DUPLICATES)));
         assertThat(properties.getTablePrefix(), is(equalTo("")));
