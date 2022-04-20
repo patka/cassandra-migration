@@ -41,22 +41,23 @@ public class CassandraMigrationAutoConfiguration {
 
     @Bean(name = MIGRATION_TASK_BEAN_NAME, initMethod = "migrate")
     @ConditionalOnBean(value = CqlSession.class)
-    @ConditionalOnMissingBean(MigrationTask.class)
-    public MigrationTask migrationTask(@Qualifier(CQL_SESSION_BEAN_NAME) CqlSession cqlSession) {
+    @ConditionalOnMissingBean
+    public MigrationTask migrationTask(@Qualifier(CQL_SESSION_BEAN_NAME) CqlSession cqlSession,
+       MigrationConfiguration configuration, MigrationRepository repository) {
+        return new MigrationTask(new Database(cqlSession, configuration)
+                .setConsistencyLevel(properties.getConsistencyLevel()),
+                repository,
+                properties.isWithConsensus());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public MigrationConfiguration migrationConfiguration() {
         if (!properties.hasKeyspaceName()) {
             throw new IllegalStateException("Please specify ['cassandra.migration.keyspace-name'] in" +
                     " order to migrate your database");
         }
 
-        MigrationRepository migrationRepository = createRepository();
-        MigrationConfiguration configuration = createConfiguration();
-        return new MigrationTask(new Database(cqlSession, configuration)
-                .setConsistencyLevel(properties.getConsistencyLevel()),
-                migrationRepository,
-                properties.isWithConsensus());
-    }
-
-    private MigrationConfiguration createConfiguration() {
         String keyspaceName = properties.getKeyspaceName();
         ReplicationStrategy replicationStrategy = properties.getReplicationStrategy();
 
@@ -66,12 +67,15 @@ public class CassandraMigrationAutoConfiguration {
                 .withExecutionProfile(properties.getExecutionProfileName());
     }
 
-    private MigrationRepository createRepository() {
+    @Bean
+    @ConditionalOnMissingBean
+    public MigrationRepository migrationRepository() {
         ScannerRegistry registry = new ScannerRegistry();
         registry.register(ScannerRegistry.JAR_SCHEME, new SpringBootLocationScanner());
         if (properties.getStrategy() == ScriptCollectorStrategy.FAIL_ON_DUPLICATES) {
             return new MigrationRepository(properties.getScriptLocations(), new FailOnDuplicatesCollector(), registry);
         }
+
         return new MigrationRepository(properties.getScriptLocations(), new IgnoreDuplicatesCollector(), registry);
     }
 }

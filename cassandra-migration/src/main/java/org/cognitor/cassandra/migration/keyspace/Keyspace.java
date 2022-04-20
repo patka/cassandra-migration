@@ -64,6 +64,6 @@ public class Keyspace {
                 " WITH REPLICATION = " +
                 getReplicationStrategy().createCqlStatement() +
                 " AND DURABLE_WRITES = " +
-                Boolean.toString(isDurableWrites());
+                isDurableWrites();
     }
 }
