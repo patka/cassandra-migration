@@ -1,16 +1,14 @@
 package org.cognitor.cassandra.migration.scanner;
 
 import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -18,11 +16,10 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
-import static io.netty.util.internal.PlatformDependent.isWindows;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.core.Is.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
 
 /**
  * @author Patrick Kranz
@@ -65,7 +62,7 @@ public class JarLocationScannerTest {
         File jarFile = File.createTempFile("Test", ".jar");
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
-        try (JarOutputStream jarOutputStream = new JarOutputStream(new FileOutputStream(jarFile), manifest)) {
+        try (JarOutputStream jarOutputStream = new JarOutputStream(Files.newOutputStream(jarFile.toPath()), manifest)) {
             InputStream inputStream = JarLocationScannerTest.class.getResourceAsStream("/cassandra/migrationtest/jarfile/1_init.cql");
             add("1_init.cql", inputStream,  jarOutputStream);
         }
