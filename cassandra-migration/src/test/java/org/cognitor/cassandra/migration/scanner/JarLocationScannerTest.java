@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.Set;
 import java.util.jar.Attributes;
@@ -31,15 +32,10 @@ public class JarLocationScannerTest {
     private static File jarFile;
     private static URI jarUri;
 
-    @Before
-    public void windowsOnly() {
-        Assume.assumeFalse("Disable tests on Windows", isWindows());
-    }
-
     @BeforeClass
     public static void beforeClass() throws IOException, URISyntaxException {
         jarFile = createJar();
-        jarUri = new URI(format("jar:file:%s", jarFile.toString().replace("\\", "/")));
+        jarUri = URI.create(format("jar:%s", jarFile.toURI().toString().replace("\\", "/")));
     }
 
     @AfterClass
