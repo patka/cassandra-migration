@@ -168,15 +168,11 @@ public class MigrationRepository {
      * @throws MigrationException in case there is a problem reading the scripts in the path.
      */
     public MigrationRepository(List<String> scriptPaths, ScriptCollector scriptCollector, ScannerRegistry scannerRegistry) {
-        if (null == scriptPaths || scriptPaths.isEmpty()) {
-            throw new IllegalArgumentException("Argument scriptPaths must not be null or empty.");
-        }
-
         this.scriptCollector = notNull(scriptCollector, "scriptCollector");
         this.scannerRegistry = notNull(scannerRegistry, "scannerRegistry");
         this.commentPattern = compile(SINGLE_LINE_COMMENT_PATTERN);
         try {
-            migrationScripts = scanForScripts(scriptPaths);
+            migrationScripts = scanForScripts(notNullOrEmpty(scriptPaths, "scriptPaths"));
         } catch (IOException | URISyntaxException exception) {
             throw new MigrationException(SCANNING_SCRIPT_FOLDER_ERROR_MSG, exception);
         }

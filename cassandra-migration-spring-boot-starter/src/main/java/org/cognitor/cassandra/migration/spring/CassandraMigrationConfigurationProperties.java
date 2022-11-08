@@ -7,10 +7,12 @@ import org.cognitor.cassandra.migration.spring.keyspace.KeyspaceReplicationStrat
 import org.cognitor.cassandra.migration.spring.keyspace.NetworkStrategyDefinition;
 import org.cognitor.cassandra.migration.spring.keyspace.SimpleStrategyDefinition;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.util.CollectionUtils;
 
 import java.util.Collections;
 import java.util.List;
+
+import static java.util.Collections.singletonList;
+import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
 
 /**
  * Configuration properties for the cassandra migration library.
@@ -22,7 +24,7 @@ import java.util.List;
 @ConfigurationProperties(prefix = "cassandra.migration")
 public class CassandraMigrationConfigurationProperties {
     private ScriptCollectorStrategy strategy = ScriptCollectorStrategy.FAIL_ON_DUPLICATES;
-    private List<String> scriptLocations = Collections.singletonList(MigrationRepository.DEFAULT_SCRIPT_PATH);
+    private List<String> scriptLocations = singletonList(MigrationRepository.DEFAULT_SCRIPT_PATH);
     private String keyspaceName;
     private KeyspaceReplicationStrategyDefinition simpleStrategy = new SimpleStrategyDefinition();
     private KeyspaceReplicationStrategyDefinition networkStrategy;
@@ -30,6 +32,19 @@ public class CassandraMigrationConfigurationProperties {
     private String executionProfileName = null;
     private DefaultConsistencyLevel consistencyLevel = DefaultConsistencyLevel.QUORUM;
     private Boolean withConsensus = false;
+
+    /**
+     * This method is deprecated in favor of <code>getScriptLocations</code> and returns the first
+     * element of the list that was set. If there is only one element this behaves the same way
+     * it always did. This method is here for backward compatibility only and will be removed in the
+     * next major release.
+     *
+     * @return The location of the migration scripts. Never null.
+     */
+    @Deprecated
+    public String getScriptLocation() {
+        return this.scriptLocations.get(0);
+    }
 
     /**
      * The location where the scripts reside on the classpath.
@@ -42,10 +57,7 @@ public class CassandraMigrationConfigurationProperties {
      */
     @Deprecated
     public void setScriptLocation(String scriptLocation) {
-        if (scriptLocation == null || scriptLocation.isEmpty()) {
-            throw new IllegalArgumentException("Script location cannot be unset.");
-        }
-        this.scriptLocations = Collections.singletonList(scriptLocation);
+        this.scriptLocations = singletonList(notNullOrEmpty(scriptLocation, "scriptLocation"));
     }
 
     /**
@@ -64,10 +76,7 @@ public class CassandraMigrationConfigurationProperties {
      * @throws IllegalArgumentException when scriptLocation is null or empty
      */
     public void setScriptLocations(List<String> scriptLocations) {
-        if (CollectionUtils.isEmpty(scriptLocations)) {
-            throw new IllegalArgumentException("Script locations cannot be unset.");
-        }
-        this.scriptLocations = scriptLocations;
+        this.scriptLocations = notNullOrEmpty(scriptLocations, "scriptLocations");
     }
 
     /**

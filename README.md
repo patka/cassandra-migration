@@ -77,6 +77,13 @@ cassandra = new CassandraBuilder()
 ```
 Since Cassandra dropped support on Windows environment after [4.0-beta3 (CASSANDRA-16171)](https://issues.apache.org/jira/browse/CASSANDRA-16171), the only solution for testing on Cassandra 4+ on Windows will be to use [TestContainers](https://www.testcontainers.org/modules/databases/cassandra/), but it requires a Docker installation.
 
+As of writing the embedded cassandra system only works with Java 8. If you want to run the test with Java 8 you can 
+set the JAVA_HOME environment variable in the shell you will execute mvn to point to a Java 8 version:
+
+```bash
+export JAVA_HOME=<path-to-java-8>
+```
+
 ## Usage
 Using this library is quite simple. Given that you have a configured instance of the
 cluster object all you need to do is integrate the next lines in your project startup code:

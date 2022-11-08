@@ -1,5 +1,7 @@
 package org.cognitor.cassandra.migration.util;
 
+import java.util.Collection;
+
 /**
  * @author Patrick Kranz
  */
@@ -37,6 +39,13 @@ public final class Ensure {
      */
     public static String notNullOrEmpty(String argument, String argumentName) {
         if (argument == null || argument.trim().isEmpty()) {
+            throw new IllegalArgumentException("Argument " + argumentName + " must not be null or empty.");
+        }
+        return argument;
+    }
+
+    public static <S, T extends Collection<S>>  T notNullOrEmpty(T argument, String argumentName) {
+        if (argument == null || argument.isEmpty()) {
             throw new IllegalArgumentException("Argument " + argumentName + " must not be null or empty.");
         }
         return argument;
