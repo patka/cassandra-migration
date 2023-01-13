@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### v2.6.0
+* added support for Spring Boot 3 autoconfiguration (Thanks to @qvistgaard)
+* added spring properties support for keyspace strategy and replications (Thanks to @rbleuse)
+* various minor improvements (Thanks to @rbleuse)
+
 ### v2.5.0
 * starting with 2.5.0 support for drivers before v4 ran out.
 * Pull Request 61: Updating README to add details about spring-data-cassandra

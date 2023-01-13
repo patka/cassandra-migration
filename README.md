@@ -182,11 +182,8 @@ on how to define such a profile.
 Once defined, you can set the execution profile name in the `MigrationConfiguration` and it will be used during migration.
 
 ## Version deprecation
-Please be aware that the version 2 of this library that uses the old version 3 Datastax driver will be deprecated by end
-of 2021. New features will mainly be implemented on the v4 version and only backported if requested. Bugfixes will still
-be applied. As this project is development only during spare time and I don't have the time to spend that I would like
-to, I have to prioritize my work. Besides, even an older installation of the database itself can be used with the newer
-driver so there is in general nothing preventing one from upgrading.
+Please be aware that the version 2 of this library that uses the old version 3 Datastax driver was deprecated by end
+of 2021.
 
 ## Maven
 If you are using maven you can add cassandra-migration as a dependency to your project like this:
@@ -205,7 +202,7 @@ the migration. You have to include the following dependency to make it work:
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration-spring-boot-starter</artifactId>
-      <version>2.5.0_v4</version>
+      <version>2.6.0_v4</version>
   </dependency>
 ```
 
@@ -219,3 +216,11 @@ In your properties file you can set the following properties:
 * cassandra.migration.table-prefix Prefix for the migrations table name
 * cassandra.migration.execution-profile-name the name for the execution profile
 * cassandra.migration.with-consensus to prevent concurrent schema updates.
+
+## Personal note
+First of all I would like to thank all the people who have already contributed to the project, be it with Pull Requests
+or by answering questions on issues. 
+Secondly, this project is maintained during my spare time between my day to day job and my family. Unfortunately, my job
+currently neither involves Spring Boot nor Cassandra which is why I barely am able to follow these projects. Therefore,
+if there is a feature missing or a major update required, do not hesitate to open an issue (or a Pull Request :) and I
+will see that I get it resolved keeping in mind that I cannot always do it immediately.
