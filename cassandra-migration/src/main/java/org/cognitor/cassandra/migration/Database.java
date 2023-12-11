@@ -63,7 +63,7 @@ public class Database implements Closeable {
      * The query that attempts to get the lead on schema migrations
      */
     private static final String TAKE_LEAD_QUERY =
-            "INSERT INTO %s (keyspace_name, leader, took_lead_at, leader_hostname) VALUES (?, ?, dateOf(now()), ?) IF NOT EXISTS USING TTL %s";
+            "INSERT INTO %s (keyspace_name, leader, took_lead_at, leader_hostname) VALUES (?, ?, toTimestamp(now()), ?) IF NOT EXISTS USING TTL %s";
 
     /**
      * The query that releases the lead on schema migrations
