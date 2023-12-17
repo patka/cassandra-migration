@@ -29,8 +29,8 @@
 
     <scm>
         <url>https://github.com/patka/cassandra-migration</url>
-        <connection>scm:git:https://github.com/patka/cassandra-migration.git</connection>
-        <developerConnection>scm:git:https://github.com/patka/cassandra-migration.git</developerConnection>
+        <connection>scm:git:git@github.com:patka/cassandra-migration.git</connection>
+        <developerConnection>scm:git:git@github.com:patka/cassandra-migration.git</developerConnection>
         <tag>HEAD</tag>
     </scm>
 
