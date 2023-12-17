@@ -7,7 +7,7 @@ The usage is oriented on the popular tools for relational databases like flyway 
 If you want to use this library with Spring Boot you can also scroll down to the description
 of how to use the Spring Boot Starter.
 
-## Datastax Driver Version 4
+## Datastax Driver Version 4 and 5
 If you already migrated your project to version 4 of the Datastax Driver you can use the code that is
 in the branch `master_v4`. You can use it by referencing the maven artifact version <current_version>_4.
 The first available version is 2.2.1_v4.
@@ -191,7 +191,7 @@ If you are using maven you can add cassandra-migration as a dependency to your p
   <dependency>
       <groupId>org.cognitor.cassandra</groupId>
       <artifactId>cassandra-migration</artifactId>
-      <version>2.5.0_v4</version>
+      <version>2.6.0_v4</version>
   </dependency>
 ```
 
