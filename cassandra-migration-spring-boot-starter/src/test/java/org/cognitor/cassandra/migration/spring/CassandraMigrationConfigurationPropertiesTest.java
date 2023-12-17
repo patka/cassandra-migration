@@ -4,16 +4,15 @@ import com.datastax.oss.driver.api.core.DefaultConsistencyLevel;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
 import org.cognitor.cassandra.migration.keyspace.ReplicationStrategy;
 import org.cognitor.cassandra.migration.keyspace.SimpleStrategy;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 
 import static org.hamcrest.MatcherAssert.assertThat;
-import java.util.Arrays;
-import java.util.Collections;
-
 import static org.hamcrest.Matchers.*;
 import static org.hamcrest.core.Is.is;
 

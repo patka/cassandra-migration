@@ -1,17 +1,17 @@
 package org.cognitor.cassandra.migration.scanner;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.net.URI;
 import java.util.Set;
 
 import static java.util.Collections.emptySet;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNull.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
@@ -65,21 +65,21 @@ public class ScannerRegistryTest {
         assertThat(registry.supports("test"), is(false));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenNoSchemeGiven() {
-        new ScannerRegistry().getScanner(null);
+        assertThrows(IllegalArgumentException.class, () -> new ScannerRegistry().getScanner(null));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenEmptySchemeGiven() {
-        new ScannerRegistry().getScanner("");
+        assertThrows(IllegalArgumentException.class, () -> new ScannerRegistry().getScanner(""));
     }
 }
 
 class CustomScanner implements LocationScanner {
 
     @Override
-    public Set<String> findResourceNames(String location, URI locationUri) throws IOException {
+    public Set<String> findResourceNames(String location, URI locationUri) {
         return emptySet();
     }
 }

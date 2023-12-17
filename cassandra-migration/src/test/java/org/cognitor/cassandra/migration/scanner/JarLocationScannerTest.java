@@ -1,10 +1,6 @@
 package org.cognitor.cassandra.migration.scanner;
 
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.io.*;
 import java.net.URI;
@@ -20,8 +16,9 @@ import java.util.jar.Manifest;
 import static io.netty.util.internal.PlatformDependent.isWindows;
 import static java.lang.String.format;
 import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.core.Is.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
@@ -31,18 +28,18 @@ public class JarLocationScannerTest {
     private static File jarFile;
     private static URI jarUri;
 
-    @Before
+    @BeforeEach
     public void windowsOnly() {
-        Assume.assumeFalse("Disable tests on Windows", isWindows());
+        Assumptions.assumeFalse(isWindows(), "Disable tests on Windows");
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() throws IOException, URISyntaxException {
         jarFile = createJar();
         jarUri = new URI(format("jar:file:%s", jarFile.toString().replace("\\", "/")));
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() throws IOException {
         if (jarFile != null) {
             jarFile.delete();
@@ -58,11 +55,10 @@ public class JarLocationScannerTest {
         assertThat(resourceNames.contains("META-INF/MANIFEST.MF"), is(true));
     }
 
-    @Test(expected = NoSuchFileException.class)
+    @Test
     public void shouldThrowExceptionWhenNonExistingPathGiven() throws IOException {
         LocationScanner scanner = new JarLocationScanner();
-        Set<String> resourceNames = scanner.findResourceNames("/nonThere", jarUri);
-        assertThat(resourceNames.size(), is(equalTo(0)));
+        assertThrows(NoSuchFileException.class, () -> scanner.findResourceNames("/nonThere", jarUri));
     }
 
     private static File createJar() throws IOException {

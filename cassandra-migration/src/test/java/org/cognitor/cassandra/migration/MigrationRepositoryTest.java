@@ -1,15 +1,14 @@
 package org.cognitor.cassandra.migration;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.core.Is.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
+import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.is;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
@@ -17,7 +16,7 @@ import org.junit.Test;
 public class MigrationRepositoryTest {
     private MigrationRepository migrationRepository;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         this.migrationRepository = new MigrationRepository("cassandra/migrationtest/successful");
     }
@@ -45,9 +44,9 @@ public class MigrationRepositoryTest {
         assertThat(scripts.get(1).getMigrationScript().isEmpty(), is(false));
     }
 
-    @Test(expected = MigrationException.class)
+    @Test
     public void shouldThrowExceptionWhenWrongScriptPathGiven() {
-        new MigrationRepository("cassandra");
+        assertThrows(MigrationException.class, () -> new MigrationRepository("cassandra"));
     }
 
     @Test

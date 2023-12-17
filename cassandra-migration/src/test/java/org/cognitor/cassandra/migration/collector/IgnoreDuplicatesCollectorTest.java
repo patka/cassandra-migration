@@ -1,14 +1,14 @@
 package org.cognitor.cassandra.migration.collector;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
-import static org.hamcrest.MatcherAssert.assertThat;
 
 /**
  * @author Patrick Kranz
@@ -16,7 +16,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class IgnoreDuplicatesCollectorTest {
     private ScriptCollector scriptCollector;
 
-    @Before
+    @BeforeEach
     public void before() {
         this.scriptCollector = new IgnoreDuplicatesCollector();
     }

@@ -1,10 +1,11 @@
 package org.cognitor.cassandra.migration.keyspace;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
@@ -26,8 +27,8 @@ public class SimpleStrategyTest {
         )));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenReplicationFactorSmallerThanOneGiven() {
-        new SimpleStrategy(0);
+        assertThrows(IllegalArgumentException.class, () -> new SimpleStrategy(0));
     }
 }

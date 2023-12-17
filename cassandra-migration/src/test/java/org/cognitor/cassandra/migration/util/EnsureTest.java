@@ -1,23 +1,24 @@
 package org.cognitor.cassandra.migration.util;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.cognitor.cassandra.migration.util.Ensure.notNull;
 import static org.cognitor.cassandra.migration.util.Ensure.notNullOrEmpty;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsEqual.equalTo;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
  */
 public class EnsureTest {
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenNullObjectGiven() {
-        notNull(null, "testArgument");
+        assertThrows(IllegalArgumentException.class, () -> notNull(null, "testArgument"));
     }
 
     @Test
@@ -26,18 +27,18 @@ public class EnsureTest {
         assertThat(notNull(testObject, "testObject"), is(equalTo(testObject)));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenNullStringGiven() {
-        notNullOrEmpty((String) null, "testString");
+        assertThrows(IllegalArgumentException.class, () -> notNullOrEmpty((String) null, "testString"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenNullListGiven() {
-        notNullOrEmpty((List) null, "testString");
+        assertThrows(IllegalArgumentException.class, () -> notNullOrEmpty((List) null, "testString"));
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowExceptionWhenEmptyListGiven() {
-        notNullOrEmpty(new ArrayList<String>(), "testString");
+        assertThrows(IllegalArgumentException.class, () -> notNullOrEmpty(new ArrayList<String>(), "testString"));
     }
 }

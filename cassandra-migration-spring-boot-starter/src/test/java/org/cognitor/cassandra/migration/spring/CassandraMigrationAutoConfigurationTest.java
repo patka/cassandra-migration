@@ -11,7 +11,10 @@ import com.github.nosan.embedded.cassandra.CassandraBuilder;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
-import org.junit.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.util.TestPropertyValues;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
@@ -34,7 +37,7 @@ public class CassandraMigrationAutoConfigurationTest {
     private static Cassandra cassandra;
     private static CqlSession session;
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() {
         cassandra = new CassandraBuilder()
                 .version("3.11.12")
@@ -44,12 +47,12 @@ public class CassandraMigrationAutoConfigurationTest {
         dropKeyspaceIfExists();
     }
 
-    @After
+    @AfterEach
     public void after() {
         dropKeyspaceIfExists();
     }
 
-    @AfterClass
+    @AfterAll
     public static void stopDb() {
         session.close();
         if (null != cassandra) {

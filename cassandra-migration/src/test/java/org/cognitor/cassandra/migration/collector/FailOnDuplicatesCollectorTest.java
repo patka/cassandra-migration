@@ -1,15 +1,16 @@
 package org.cognitor.cassandra.migration.collector;
 
 import org.cognitor.cassandra.migration.MigrationException;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.core.Is.is;
 import static org.hamcrest.core.IsNot.not;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * @author Patrick Kranz
@@ -17,7 +18,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class FailOnDuplicatesCollectorTest {
     private ScriptCollector scriptCollector;
 
-    @Before
+    @BeforeEach
     public void before() {
         this.scriptCollector = new FailOnDuplicatesCollector();
     }
@@ -30,10 +31,11 @@ public class FailOnDuplicatesCollectorTest {
         assertThat(scriptCollector.getScriptFiles().size(), is(equalTo(2)));
     }
 
-    @Test(expected = MigrationException.class)
+    @Test
     public void shouldThrowExceptionWhenDuplicateScriptFileVersionsGiven() {
         scriptCollector.collect(new ScriptFile(0, "/0_init.cql", "init.cql"));
-        scriptCollector.collect(new ScriptFile(0, "/0_another-init.cql", "another-init.cql"));
+        assertThrows(MigrationException.class, () ->
+                scriptCollector.collect(new ScriptFile(0, "/0_another-init.cql", "another-init.cql")));
     }
 
     @Test

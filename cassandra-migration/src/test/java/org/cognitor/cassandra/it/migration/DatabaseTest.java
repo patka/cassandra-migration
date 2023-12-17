@@ -15,11 +15,7 @@ import org.cognitor.cassandra.migration.MigrationRepository;
 import org.cognitor.cassandra.migration.MigrationTask;
 import org.cognitor.cassandra.migration.keyspace.Keyspace;
 import org.cognitor.cassandra.migration.keyspace.NetworkStrategy;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.*;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
@@ -31,8 +27,8 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.asList;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.notNullValue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertThat;
 
 /**
  * @author Patrick Kranz
@@ -48,7 +44,7 @@ public class DatabaseTest {
     private CqlSession session;
     private static Cassandra cassandra;
 
-    @BeforeClass
+    @BeforeAll
     public static void initDb() {
         cassandra = new CassandraBuilder()
                 .version("3.11.12")
@@ -57,21 +53,21 @@ public class DatabaseTest {
         cassandra.start();
     }
 
-    @AfterClass
+    @AfterAll
     public static void stopDb() {
         if (null != cassandra) {
             cassandra.stop();
         }
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         session = createSession();
         session.execute("CREATE KEYSPACE test_keyspace WITH REPLICATION = " +
                 "{ 'class' : 'SimpleStrategy', 'replication_factor' : 1 };");
     }
 
-    @After
+    @AfterEach
     public void after() {
         if (session.isClosed()) {
             session = createSession();
