@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 ## Unreleased
 
 ## Released
+### 2.6.1
+* Pull Request 84: switched dataOf to timestampOf to be compliant with Cassandra 5 (Thanks to @denniskline and @adejanovski)
+* Upgrade to Junit 5
+* Dependency upgrades
+
 ### v2.6.0
 * added support for Spring Boot 3 autoconfiguration (Thanks to @qvistgaard)
 * added spring properties support for keyspace strategy and replications (Thanks to @rbleuse)
