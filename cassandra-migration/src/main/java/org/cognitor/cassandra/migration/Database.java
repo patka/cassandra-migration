@@ -98,7 +98,7 @@ public class Database implements Closeable {
     private final String keyspaceName;
     private final Keyspace keyspace;
     private final CqlSession session;
-    private final ConsistencyLevel consistencyLevel = ConsistencyLevel.QUORUM;
+    private ConsistencyLevel consistencyLevel = ConsistencyLevel.SERIAL;
     private final PreparedStatement logMigrationStatement;
     private final PreparedStatement takeMigrationLeadStatement;
     private final PreparedStatement releaseMigrationLeadStatement;
@@ -286,7 +286,8 @@ public class Database implements Closeable {
 
     /**
      * Attempts to acquire the lead on a migration through a LightWeight
-     * Transaction. For this statement the consistency level of <code>QUORUM</code> is used.
+     * Transaction. For this statement the consistency level of <code>SERIAL</code> is used by default,
+     * see {@link Database#setLeaderConsistencyLevel(ConsistencyLevel)} for configuring this.
      *
      * @param repositoryLatestVersion the latest version number in the migration repository
      * @return if taking the lead succeeded.
@@ -296,8 +297,8 @@ public class Database implements Closeable {
             try {
                 LOGGER.debug("Trying to take lead on schema migrations");
                 BoundStatement boundStatement = takeMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId,
-                        this.instanceAddress);
-                ResultSet lwtResult = executeStatement(boundStatement, this.consistencyLevel);
+                        this.instanceAddress).setSerialConsistencyLevel(this.consistencyLevel);
+                ResultSet lwtResult = executeStatement(boundStatement);
 
                 if (lwtResult.wasApplied()) {
                     LOGGER.debug("Took lead on schema migrations");
@@ -334,8 +335,8 @@ public class Database implements Closeable {
         if (tookLead) {
             LOGGER.debug("Trying to release lead on schema migrations");
 
-            BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId);
-            ResultSet lwtResult = executeStatement(boundStatement, this.consistencyLevel);
+            BoundStatement boundStatement = releaseMigrationLeadStatement.bind(getKeyspaceName(), this.instanceId).setSerialConsistencyLevel(this.consistencyLevel);
+            ResultSet lwtResult = executeStatement(boundStatement);
 
             if (lwtResult.wasApplied()) {
                 LOGGER.debug("Released lead on schema migrations");
@@ -389,13 +390,11 @@ public class Database implements Closeable {
     }
 
     private ResultSet executeStatement(String statement) throws DriverException {
-        return executeStatement(SimpleStatement.newInstance(statement), this.migrationConsistencyLevel);
+        return executeStatement(SimpleStatement.newInstance(statement).setConsistencyLevel(this.migrationConsistencyLevel));
     }
 
-    private ResultSet executeStatement(Statement<?> statement, ConsistencyLevel consistencyLevel) throws DriverException {
-        return session.execute(statement
-                .setExecutionProfileName(executionProfileName)
-                .setConsistencyLevel(consistencyLevel));
+    private ResultSet executeStatement(Statement<?> statement) throws DriverException {
+        return session.execute(statement.setExecutionProfileName(executionProfileName));
     }
 
     /**
@@ -406,8 +405,9 @@ public class Database implements Closeable {
      */
     private void logMigration(DbMigration migration, boolean wasSuccessful) {
         BoundStatement boundStatement = logMigrationStatement.bind(wasSuccessful, migration.getVersion(),
-                migration.getScriptName(), migration.getMigrationScript(), Instant.now());
-        executeStatement(boundStatement, this.migrationConsistencyLevel);
+                migration.getScriptName(), migration.getMigrationScript(), Instant.now())
+            .setConsistencyLevel(this.migrationConsistencyLevel);
+        executeStatement(boundStatement);
     }
 
     /**
@@ -431,6 +431,18 @@ public class Database implements Closeable {
      */
     public Database setConsistencyLevel(ConsistencyLevel migrationConsistencyLevel) {
         this.migrationConsistencyLevel = notNull(migrationConsistencyLevel, "migrationConsistencyLevel");
+        return this;
+    }
+
+    /**
+     * Set the consistency level for the lightweight transaction used for taking the lead in migrations. Default is
+     * <code>ConsistencyLevel.SERIAL</code>.
+     *
+     * @param consistencyLevel The Cassandra serial consistency level to use for the lightweight transaction
+     * @return the current database instance
+     */
+    public Database setLeaderConsistencyLevel(ConsistencyLevel consistencyLevel) {
+        this.consistencyLevel = notNull(consistencyLevel, "consistencyLevel");
         return this;
     }
 
