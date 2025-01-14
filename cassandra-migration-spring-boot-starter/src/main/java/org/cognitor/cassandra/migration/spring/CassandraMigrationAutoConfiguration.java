@@ -18,6 +18,7 @@ import org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfigurati
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -29,6 +30,7 @@ import org.springframework.context.annotation.Configuration;
 @EnableConfigurationProperties(CassandraMigrationConfigurationProperties.class)
 @AutoConfigureAfter(CassandraAutoConfiguration.class)
 @ConditionalOnClass(CqlSession.class)
+@ConditionalOnProperty(value = "cassandra.migration.enabled", havingValue = "true", matchIfMissing = true)
 public class CassandraMigrationAutoConfiguration {
     public static final String CQL_SESSION_BEAN_NAME = "cassandraMigrationCqlSession";
     public static final String MIGRATION_TASK_BEAN_NAME = "migrationTask";
